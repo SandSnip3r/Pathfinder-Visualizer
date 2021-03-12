@@ -1,8 +1,8 @@
 #include "mainwindow.h"
 
+#include <QFileDialog>
 #include <QMenuBar>
-
-#include <iostream>
+#include <QString>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   createToolbar();
@@ -18,7 +18,7 @@ void MainWindow::createToolbar() {
   QAction *openAct = new QAction(tr("&Open..."), this);
   openAct->setShortcuts(QKeySequence::Open);
   openAct->setStatusTip(tr("Open an existing file"));
-  connect(openAct, &QAction::triggered, this, &MainWindow::open);
+  connect(openAct, &QAction::triggered, this, &MainWindow::openFile);
   fileMenuPtr->addAction(openAct);
 }
 
@@ -32,6 +32,9 @@ void MainWindow::createNavmeshRenderArea() {
   setCentralWidget(navmeshRenderScrollArea_);
 }
 
-void MainWindow::open() {
-    std::cout << "Opening a file!" << std::endl;
+void MainWindow::openFile() {
+  QString fileName = QFileDialog::getOpenFileName(this,tr("Choose Planar Straight Line Graph file"),QString(),tr("Poly (*.poly)"));
+  if (!fileName.isEmpty()) {
+    navmeshRenderArea_->openFile(fileName);
+  }
 }

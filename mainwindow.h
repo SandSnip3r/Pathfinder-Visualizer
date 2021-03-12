@@ -18,7 +18,7 @@ private:
   void createToolbar();
   void createNavmeshRenderArea();
 private slots:
-  void open();
+  void openFile();
 };
 
 #endif // MAINWINDOW_H

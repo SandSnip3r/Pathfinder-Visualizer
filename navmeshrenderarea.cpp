@@ -12,3 +12,7 @@ QSize NavmeshRenderArea::minimumSizeHint() const {
 QSize NavmeshRenderArea::sizeHint() const {
   return minimumSizeHint();
 }
+
+void NavmeshRenderArea::openFile(QString fileName) {
+  
+}
