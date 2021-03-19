@@ -1,15 +1,12 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(PathfinderVisualization LANGUAGES CXX)
+project(PathfinderVisualization LANGUAGES CXX C)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
-
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # QtCreator supports the following variables for Android, which are identical to qmake Android variables.
 # Check https://doc.qt.io/qt/deployment-android.html for more information.
@@ -24,8 +21,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #    endif()
 #endif()
 
+#set (CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/Pathfinder")
+#set (Pathfinder_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Pathfinder")
+
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
+#find_package(Pathfinder REQUIRED PATHS "${CMAKE_CURRENT_SOURCE_DIR}/Pathfinder")
+
+add_subdirectory(Pathfinder)
 
 set(PROJECT_SOURCES
         main.cpp
@@ -33,6 +36,8 @@ set(PROJECT_SOURCES
         mainwindow.h
         navmeshrenderarea.cpp
         navmeshrenderarea.hpp
+        zoomablescrollarea.cpp
+        zoomablescrollarea.hpp
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -51,4 +56,7 @@ else()
     endif()
 endif()
 
+target_compile_features(PathfinderVisualization PUBLIC cxx_std_11)
+
 target_link_libraries(PathfinderVisualization PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(PathfinderVisualization PRIVATE Pathfinder)
