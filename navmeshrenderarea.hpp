@@ -16,43 +16,74 @@ class NavmeshRenderArea : public QWidget {
 public:
   explicit NavmeshRenderArea(QWidget *parent = nullptr);
   QSize minimumSizeHint() const override;
+  void mouseMoveEvent(QMouseEvent *event) override;
   QSize sizeHint() const override;
-  void openFile(QString fileName);
+
+  void resetZoom();
   void zoomIn(double zoomDiff);
   void zoomOut(double zoomDiff);
+
+  void setAgentRadius(double agentRadius);
+  void setNavmesh(const triangleio &triangleData);
+  void setPathStartPoint(const Vector &point);
+  void setPathGoalPoint(const Vector &point);
+  void setPath(const PathfindingResult &pathfindingResult);
+  void resetPathStart();
+  void resetPathGoal();
+  void resetPath();
+
+  void setHandleMouseDrag(bool enabled);
+
 protected:
   void paintEvent(QPaintEvent *event) override;
+
 private:
   // View data
-  static const int kMargin_{50};
-  int renderAreaWidth_{1000}, renderAreaHeight_{static_cast<int>(renderAreaWidth_/1.618033988749895)};
-  int widgetWidth_{0}, widgetHeight_{0};
-  // int widgetWidth_{1000}, widgetHeight_{static_cast<int>(widgetWidth_/1.618033988749895)};
+  static const int kMargin_{25};
+  double navmeshMinX_, navmeshMinY_;
+  double navmeshWidth_{1000}, navmeshHeight_{navmeshWidth_/1.618033988749895}; // TODO: How to init
+  int widgetBaseWidth_{0}, widgetBaseHeight_{0};
   double zoomLevel_{0};
+  bool handleMouseDrag_{false};
+
+  // Display configurations
+  bool displayTriangleLabels_{false};
+  bool displayEdgeLabels_{false};
+  bool displayVertexLabels_{false};
 
   // Navmesh data
-  triangleio savedTriangleData_;
-  triangleio savedTriangleVoronoiData_;
-  BehaviorFactory behaviorFactory_;
+  const triangleio *triangleData_{nullptr};
 
   // Pathfinding data
-  const Vector startPoint_{480, 330};
-  const Vector goalPoint_{730, 770};
-  PathfindingResult pathfindingResult_;
+  double agentRadius_{0.0};
+  std::optional<Vector> startPoint_;
+  std::optional<Vector> goalPoint_;
+  const PathfindingResult *pathfindingResult_{nullptr};
 
-  void buildNavmeshFromFile(QString fileName);
-  void initializeTriangleData();
   void setSizeBasedOnNavmesh();
   QSize currentSize() const;
   void drawVertices(QPainter &painter);
   void drawEdges(QPainter &painter);
   void drawShortestPath(QPainter &painter);
   void drawPathfindingStartAndGoal(QPainter &painter);
+  void drawVertexLabels(QPainter &painter);
+  void drawEdgeLabels(QPainter &painter);
+  void drawTriangleLabels(QPainter &painter);
+
   void resizeForNewZoom();
-  double getScaleBasedOnZoomLevel() const;
+  double getScale() const;
+
+  Vector transformWidgetCoordinateToNavmeshCoordinate(const Vector &v) const;
+  Vector transformNavmeshCoordinateToWidgetCoordinate(const Vector &v) const;
   Vector transformVectorToRenderArea(const Vector &v) const;
-  void rebuildPath();
+
 signals:
+  void draggingMouseOnNavmesh(const Vector &navmeshPoint);
+
+public slots:
+  void setDisplayTriangleLabels(bool shouldDisplay);
+  void setDisplayEdgeLabels(bool shouldDisplay);
+  void setDisplayVertexLabels(bool shouldDisplay);
 };
 
 #endif // NAVMESHRENDERAREA_HPP

@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/move.png</file>
+        <file>icons/goal.png</file>
+        <file>icons/start.png</file>
+    </qresource>
+</RCC>

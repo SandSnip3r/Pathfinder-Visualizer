@@ -33,25 +33,30 @@ add_subdirectory(Pathfinder)
 set(PROJECT_SOURCES
         main.cpp
         mainwindow.cpp
-        mainwindow.h
         navmeshrenderarea.cpp
-        navmeshrenderarea.hpp
         zoomablescrollarea.cpp
-        zoomablescrollarea.hpp
+        navmeshdisplay.cpp
+)
+
+set(RESOURCE_FILES
+  resources.qrc
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(PathfinderVisualization
         ${PROJECT_SOURCES}
+        ${RESOURCE_FILES}
     )
 else()
     if(ANDROID)
         add_library(PathfinderVisualization SHARED
             ${PROJECT_SOURCES}
+            ${RESOURCE_FILES}
         )
     else()
         add_executable(PathfinderVisualization
             ${PROJECT_SOURCES}
+            ${RESOURCE_FILES}
         )
     endif()
 endif()
