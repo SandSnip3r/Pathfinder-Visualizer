@@ -151,6 +151,10 @@ void NavmeshRenderArea::drawEdges(QPainter &painter) {
         throw std::runtime_error("An edge in the triangle references a nonexistent vertex");
       }
       const int marker = triangleData_->edgemarkerlist[i];
+      if (!displayNonConstraintEdges_ && marker <= 1) {
+        // Do not display non-input edges
+        continue;
+      }
       const Vector vertexA = transformNavmeshCoordinateToWidgetCoordinate(Vector{triangleData_->pointlist[vertexAIndex*2], triangleData_->pointlist[vertexAIndex*2+1]});
       const Vector vertexB = transformNavmeshCoordinateToWidgetCoordinate(Vector{triangleData_->pointlist[vertexBIndex*2], triangleData_->pointlist[vertexBIndex*2+1]});
       if (marker == 1) {
@@ -393,20 +397,22 @@ void NavmeshRenderArea::paintEvent(QPaintEvent * /* event */) {
   }
 }
 
+void NavmeshRenderArea::setDisplayNonConstraintEdges(bool shouldDisplay) {
+  displayNonConstraintEdges_ = shouldDisplay;
+  update();
+}
+
 void NavmeshRenderArea::setDisplayTriangleLabels(bool shouldDisplay) {
   displayTriangleLabels_ = shouldDisplay;
-  std::cout << "We " << (displayTriangleLabels_ ? "do " : "do not ") << "want to display triangle labels" << std::endl;
   update();
 }
 
 void NavmeshRenderArea::setDisplayEdgeLabels(bool shouldDisplay) {
   displayEdgeLabels_ = shouldDisplay;
-  std::cout << "We " << (displayEdgeLabels_ ? "do " : "do not ") << "want to display edge labels" << std::endl;
   update();
 }
 
 void NavmeshRenderArea::setDisplayVertexLabels(bool shouldDisplay) {
   displayVertexLabels_ = shouldDisplay;
-  std::cout << "We " << (displayVertexLabels_ ? "do " : "do not ") << "want to display vertex labels" << std::endl;
   update();
 }

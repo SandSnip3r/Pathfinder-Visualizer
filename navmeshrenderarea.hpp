@@ -1,7 +1,7 @@
 #ifndef NAVMESHRENDERAREA_HPP
 #define NAVMESHRENDERAREA_HPP
 
-#include "Pathfinder/behaviorFactory.h"
+#include "Pathfinder/behaviorBuilder.h"
 #include "Pathfinder/pathfinder.h"
 #include "Pathfinder/triangle/triangle_api.h"
 #include "Pathfinder/vector.h"
@@ -47,6 +47,7 @@ private:
   bool handleMouseDrag_{false};
 
   // Display configurations
+  bool displayNonConstraintEdges_{false};
   bool displayTriangleLabels_{false};
   bool displayEdgeLabels_{false};
   bool displayVertexLabels_{false};
@@ -81,6 +82,7 @@ signals:
   void draggingMouseOnNavmesh(const Vector &navmeshPoint);
 
 public slots:
+  void setDisplayNonConstraintEdges(bool shouldDisplay);
   void setDisplayTriangleLabels(bool shouldDisplay);
   void setDisplayEdgeLabels(bool shouldDisplay);
   void setDisplayVertexLabels(bool shouldDisplay);

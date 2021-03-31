@@ -3,18 +3,6 @@
 
 #include <QScrollBar>
 
-#include <iostream> //TODO: Remove
-
-void ZoomableScrollArea::mousePressEvent(QMouseEvent *event) {
-  if (event->buttons() & Qt::LeftButton) {
-    const auto posInChild = widget()->mapFromParent(event->pos());
-    std::cout << "Clicked at child pos " << posInChild.x() << ',' << posInChild.y() << std::endl;
-    std::cout << "Window width: " << width()-verticalScrollBar()->width() << ", child width: " << widget()->width() << ", horizontal scroll max: " << horizontalScrollBar()->maximum() << ", horizonal scroll val: " << horizontalScrollBar()->value() << std::endl;
-
-  }
-  QScrollArea::mousePressEvent(event);
-}
-
 void ZoomableScrollArea::mouseReleaseEvent(QMouseEvent *event) {
   if (!(event->buttons() & Qt::LeftButton)) {
     // Left button is no longer down

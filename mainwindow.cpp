@@ -24,14 +24,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   setWindowTitle(tr("Pathfinder Visualization"));
 
   // Window is built, now lets try to open and display the sample navmesh file
-  initializeTriangleData();
-  try {
-    openNavmeshFile(kSampleNavmeshFileName_);
-  } catch (std::exception &ex) {
-    // Could not open the sample, pop up the open prompt for the user to open a poly file
-    std::cout << "Could not open poly file \"" << kSampleNavmeshFileName_.toStdString() << "\"" << std::endl;
-    openNavmeshFilePrompt();
-  }
+  initializeNavmeshTriangleData();
+  openNavmeshFile(kSampleNavmeshFileName_);
 }
 
 MainWindow::~MainWindow() {
@@ -84,7 +78,7 @@ void MainWindow::createConfigDock() {
   // ====================================================================
   QLabel *pathfindingCharacterRadiusLabel = new QLabel(tr("Character Radius: "));
   agentRadiusLineEdit_ = new QLineEdit;
-  // TODO: Add an input filter to the QLineEdit
+  // TODO: Add an input filter to the QLineEdit (that also matches the possibilities of the slider)
   agentRadiusSlider_ = new QSlider(Qt::Horizontal);
   // TODO: It might make sense to scale the maximum and step based on the size of the given navmesh
   agentRadiusSlider_->setMaximum(1000);
@@ -105,32 +99,18 @@ void MainWindow::createConfigDock() {
   pathfindingOptionsTabContent->setLayout(pathfindingOptionsLayout);
 
   // ====================================================================
-  // =======================Triangulation settings=======================
-  // ====================================================================
-  QCheckBox *conformingDelaunayCheckBox = new QCheckBox(tr("Conforming Delaunay"));
-  QCheckBox *enforceMinimumAngleCheckBox = new QCheckBox(tr("Enforce minimum angle"));
-  // TODO: Add textedit for minimum angle
-
-  QGridLayout *triangulationOptionsLayout = new QGridLayout;
-  triangulationOptionsLayout->addWidget(conformingDelaunayCheckBox, 0, 0, 1, 1);
-  triangulationOptionsLayout->addWidget(enforceMinimumAngleCheckBox, 1, 0, 1, 1);
-  // triangulationOptionsLayout->addWidget(minimumAngleSlider, 1, 1, 1, 1);
-  triangulationOptionsLayout->setRowStretch(triangulationOptionsLayout->rowCount(), 1);
-
-  QWidget *triangulationOptionsTabContent = new QWidget;
-  triangulationOptionsTabContent->setLayout(triangulationOptionsLayout);
-
-  // ====================================================================
   // =======================Visualization settings=======================
   // ====================================================================
+  nonConstraintEdgesCheckBox_ = new QCheckBox(tr("Show Non-Constraint Edges"));
   triangleLabelsCheckBox_ = new QCheckBox(tr("Show Triangle Labels"));
   edgeLabelsCheckBox_ = new QCheckBox(tr("Show Edge Labels"));
   vertexLabelsCheckBox_ = new QCheckBox(tr("Show Vertex Labels"));
 
   QGridLayout *navmeshVisualizationOptionsLayout = new QGridLayout;
-  navmeshVisualizationOptionsLayout->addWidget(triangleLabelsCheckBox_, 0, 0, 1, 1);
-  navmeshVisualizationOptionsLayout->addWidget(edgeLabelsCheckBox_, 1, 0, 1, 1);
-  navmeshVisualizationOptionsLayout->addWidget(vertexLabelsCheckBox_, 2, 0, 1, 1);
+  navmeshVisualizationOptionsLayout->addWidget(nonConstraintEdgesCheckBox_, 0, 0, 1, 1);
+  navmeshVisualizationOptionsLayout->addWidget(triangleLabelsCheckBox_, 1, 0, 1, 1);
+  navmeshVisualizationOptionsLayout->addWidget(edgeLabelsCheckBox_, 2, 0, 1, 1);
+  navmeshVisualizationOptionsLayout->addWidget(vertexLabelsCheckBox_, 3, 0, 1, 1);
   navmeshVisualizationOptionsLayout->setRowStretch(navmeshVisualizationOptionsLayout->rowCount(), 1);
 
   QWidget *navmeshVisualizationOptionsTabContent = new QWidget;
@@ -143,7 +123,6 @@ void MainWindow::createConfigDock() {
   // Build the config UI
   QTabWidget *tabWidget = new QTabWidget(this);
   tabWidget->addTab(pathfindingOptionsTabContent, tr("Pathfinding"));
-  tabWidget->addTab(triangulationOptionsTabContent, tr("Triangulation"));
   tabWidget->addTab(navmeshVisualizationOptionsTabContent, tr("Navmesh Visualization"));
 
   // Now, build the dock for the config UI
@@ -158,6 +137,7 @@ void MainWindow::createConnectionsToNavmeshDisplay() {
   connect(dragAction_, &QAction::toggled, navmeshDisplay_, &NavmeshDisplay::setDragModeEnabled);
 
   // Configuration
+  connect(nonConstraintEdgesCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::setDisplayNonConstraintEdges);
   connect(triangleLabelsCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::setDisplayTriangleLabels);
   connect(edgeLabelsCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::setDisplayEdgeLabels);
   connect(vertexLabelsCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::setDisplayVertexLabels);
@@ -169,14 +149,7 @@ void MainWindow::createConnectionsToNavmeshDisplay() {
 void MainWindow::openNavmeshFilePrompt() {
   QString filename = QFileDialog::getOpenFileName(this,tr("Choose Planar Straight Line Graph file"),QString(),tr("Poly (*.poly)"));
   if (!filename.isEmpty()) {
-    try {
-      openNavmeshFile(filename);
-    } catch (std::exception &ex) {
-      // Could not open the file
-      QMessageBox msgBox;
-      msgBox.setText("Could not open file");
-      msgBox.exec();
-    }
+    openNavmeshFile(filename);
   }
 }
 
@@ -226,52 +199,55 @@ void MainWindow::setAgentRadiusSlider() {
 //===========================================================================================================
 
 void MainWindow::openNavmeshFile(const QString &filename) {
-  // First, try to open the file and build the navmesh
-  buildNavmeshFromFile(filename);
+  try {
+    // First, try to open the file and build the navmesh
+    buildNavmeshFromFile(filename);
 
-  // File must've opened successfully, reset path data
-  startPoint_.reset();
-  goalPoint_.reset();
-  navmeshDisplay_->resetPathStart();
-  navmeshDisplay_->resetPathGoal();
-  navmeshDisplay_->resetPath();
+    // File must've opened successfully, reset path data
+    startPoint_.reset();
+    goalPoint_.reset();
+    navmeshDisplay_->resetPathStart();
+    navmeshDisplay_->resetPathGoal();
+    navmeshDisplay_->resetPath();
+  } catch (std::exception &ex) {
+    // Could not open the file
+    QMessageBox msgBox;
+    msgBox.setText("Could not open file \""+filename+"\". The file may have invalid .poly format.");
+    msgBox.exec();
 
-  // Now, give the navmesh to the render area to be displayed
-  navmeshDisplay_->setNavmesh(savedTriangleData_);
+    // Need to re-prompt user to open another file
+    openNavmeshFilePrompt();
+  }
 }
 
-void MainWindow::initializeTriangleData() {
+void MainWindow::initializeNavmeshTriangleData() {
 	triangle_initialize_triangleio(&savedTriangleData_);
 	triangle_initialize_triangleio(&savedTriangleVoronoiData_);
 }
 
 void MainWindow::buildNavmeshFromFile(QString fileName) {
+  triangleio inputData;
+  triangle_initialize_triangleio(&inputData);
+
   int firstNode;
-
-  // Create a structure for the input data to be read into
-  triangleio inputStruct;
-  triangle_initialize_triangleio(&inputStruct);
-
   // Call Triangle's file reading function
-  int res = triangle_read_poly(fileName.toStdString().c_str(), &inputStruct, &firstNode);
-  if (res < 0) {
-    std::cout << "Reading file error: " << res << std::endl;
-    throw std::runtime_error("Unable to open poly file");
+  int readFileResult = triangle_read_poly(fileName.toStdString().c_str(), &inputData, &firstNode);
+  if (readFileResult < 0) {
+    throw std::runtime_error("Unable to open .poly file, error "+std::to_string(readFileResult));
   }
 
   // Create a context
   context *ctx;
   ctx = triangle_context_create();
   // Set context's behavior
-  *(ctx->b) = behaviorFactory_.getBehavior();
+  *(ctx->b) = behaviorBuilder_.getBehavior();
 
   // Build the triangle mesh
-  int meshCreateResult = triangle_mesh_create(ctx, &inputStruct);
+  int meshCreateResult = triangle_mesh_create(ctx, &inputData);
   if (meshCreateResult < 0) {
     // Free memory
-    triangle_free_triangleio(&inputStruct);
-    std::cout << "Mesh creating error: " << meshCreateResult << std::endl;
-    throw std::runtime_error("Error creating mesh");
+    triangle_free_triangleio(&inputData);
+    throw std::runtime_error("Error creating navmesh ("+std::to_string(meshCreateResult)+")");
   }
 
   // Now, the context holds the mesh, lets extract this data
@@ -279,22 +255,23 @@ void MainWindow::buildNavmeshFromFile(QString fileName) {
   // Free in case this has already been used
   triangle_free_triangleio(&savedTriangleData_);
   triangle_free_triangleio(&savedTriangleVoronoiData_);
-  initializeTriangleData();
+  initializeNavmeshTriangleData();
 
   // Copy data
   int copyResult = triangle_mesh_copy(ctx, &savedTriangleData_, 1, 1, &savedTriangleVoronoiData_);
   if (copyResult < 0) {
     // Free memory
-    triangle_free_triangleio(&inputStruct);
-    std::cout << "Data copying error: " << copyResult << std::endl;
-    throw std::runtime_error("Error copying mesh data");
+    triangle_free_triangleio(&inputData);
+    throw std::runtime_error("Error copying navmesh data ("+std::to_string(copyResult)+")");
   }
 
   // Done with input data
-  triangle_free_triangleio(&inputStruct);
+  triangle_free_triangleio(&inputData);
 
   // Done with context
   triangle_context_destroy(ctx);
+
+  navmeshDisplay_->setNavmesh(savedTriangleData_);
 }
 
 void MainWindow::rebuildPath() {
@@ -308,7 +285,7 @@ void MainWindow::rebuildPath() {
     pathfindingResult_ = pathfinder.findShortestPath(*startPoint_, *goalPoint_);
     navmeshDisplay_->setPath(pathfindingResult_);
   } catch (std::exception &ex) {
-    std::cout << "Exception while building path: " << ex.what() << std::endl;
+    // Unable to build path
     navmeshDisplay_->resetPath();
   }
 }
@@ -317,14 +294,14 @@ void MainWindow::agentRadiusTextChanged(const QString &text) {
   bool conversionSuccessful{false};
   double newRadius = text.toDouble(&conversionSuccessful);
   if (conversionSuccessful) {
-    // Update internal storage
+    // Update value
     agentRadius_ = newRadius;
     // Update slider
-    if (!matchingLineEditAndSlider_) {
+    if (!matchingAgentRadiusLineEditAndSlider_) {
       // Someone manually changed this, update the other widget to match
-      matchingLineEditAndSlider_ = true;
+      matchingAgentRadiusLineEditAndSlider_ = true;
       setAgentRadiusSlider();
-      matchingLineEditAndSlider_ = false;
+      matchingAgentRadiusLineEditAndSlider_ = false;
     }
     // Update navmesh
     navmeshDisplay_->getNavmeshRenderArea()->setAgentRadius(agentRadius_);
@@ -334,14 +311,14 @@ void MainWindow::agentRadiusTextChanged(const QString &text) {
 }
 
 void MainWindow::agentRadiusSliderChanged(int value) {
-  // Update internal storage
+  // Update value
   agentRadius_ = value;
   // Update LineEdit
-  if (!matchingLineEditAndSlider_) {
+  if (!matchingAgentRadiusLineEditAndSlider_) {
     // Someone manually changed this, update the other widget to match
-    matchingLineEditAndSlider_ = true;
+    matchingAgentRadiusLineEditAndSlider_ = true;
     setAgentRadiusLineEdit();
-    matchingLineEditAndSlider_ = false;
+    matchingAgentRadiusLineEditAndSlider_ = false;
   }
   // Update navmesh
   navmeshDisplay_->getNavmeshRenderArea()->setAgentRadius(agentRadius_);

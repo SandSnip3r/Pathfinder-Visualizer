@@ -122,7 +122,6 @@ void NavmeshDisplay::resetPath() {
 }
 
 void NavmeshDisplay::setDragModeEnabled(bool enabled) {
-  std::cout << "setDragModeEnabled:" << enabled << std::endl;
   navmeshRenderScrollArea_->setDragModeEnabled(enabled);
 }
 

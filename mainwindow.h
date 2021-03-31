@@ -32,6 +32,8 @@ private:
   // Config UI elements
   QLineEdit *agentRadiusLineEdit_;
   QSlider *agentRadiusSlider_;
+
+  QCheckBox *nonConstraintEdgesCheckBox_;
   QCheckBox *triangleLabelsCheckBox_;
   QCheckBox *edgeLabelsCheckBox_;
   QCheckBox *vertexLabelsCheckBox_;
@@ -46,16 +48,18 @@ private:
   void createConnectionsToNavmeshDisplay();
 
   // UI maninpulation functions
-  bool matchingLineEditAndSlider_{false};
+  bool matchingAgentRadiusLineEditAndSlider_{false};
+  bool matchingTriangulationMinimumAngleLineEditAndSlider_{false};
   void setAgentRadiusLineEdit();
   void setAgentRadiusSlider();
 
   // Navmesh data
   triangleio savedTriangleData_;
   triangleio savedTriangleVoronoiData_;
-  BehaviorFactory behaviorFactory_;
+  BehaviorBuilder behaviorBuilder_;
   // Navmesh functions
-  void initializeTriangleData();
+  void initializeInputTriangleData();
+  void initializeNavmeshTriangleData();
   void openNavmeshFile(const QString &filename);
   void buildNavmeshFromFile(QString fileName);
 
