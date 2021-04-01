@@ -45,6 +45,7 @@ QWidget* NavmeshDisplay::createTextDisplayArea() {
   navmeshInfoLayout->addWidget(triangleCountLabel_);
   navmeshInfoLayout->addWidget(totalEdgeCountLabel_);
   navmeshInfoLayout->addWidget(constrainedEdgeCountLabel_);
+  navmeshInfoLayout->setAlignment(Qt::AlignTop);
   navmeshInfoGroupBox->setLayout(navmeshInfoLayout);
   // Add this groupbox to the overall layout
   layout->addWidget(navmeshInfoGroupBox);
@@ -58,6 +59,7 @@ QWidget* NavmeshDisplay::createTextDisplayArea() {
   pathInfoLayout->addWidget(pathStartPositionLabel_);
   pathInfoLayout->addWidget(pathGoalPositionLabel_);
   pathInfoLayout->addWidget(pathLengthLabel_);
+  pathInfoLayout->setAlignment(Qt::AlignTop);
   pathInfoGroupBox->setLayout(pathInfoLayout);
   // Add this groupbox to the overall layout
   layout->addWidget(pathInfoGroupBox);

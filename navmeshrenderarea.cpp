@@ -1,6 +1,7 @@
 #include "navmeshrenderarea.hpp"
 
 #include <QPointF>
+#include <QPolygonF>
 #include <QtMath>
 
 #include <chrono>
@@ -243,6 +244,81 @@ void NavmeshRenderArea::drawPathfindingStartAndGoal(QPainter &painter) {
   painter.restore();
 }
 
+void NavmeshRenderArea::drawTriangleCorridor(QPainter &painter) {
+  if (pathfindingResult_ != nullptr) {
+    const QColor kTriangleColor(0, 255, 0, 33);
+    painter.save();
+    drawTriangles(painter, pathfindingResult_->aStarInfo.triangleCorridor, kTriangleColor);
+    painter.restore();
+  }
+}
+void NavmeshRenderArea::drawTrianglesCompletelySearched(QPainter &painter) {
+  if (pathfindingResult_ != nullptr) {
+    const QColor kTriangleColor(255, 255, 0, 33);
+    painter.save();
+    std::vector<int> triangles;
+    std::copy_if(pathfindingResult_->aStarInfo.trianglesSearched.begin(), pathfindingResult_->aStarInfo.trianglesSearched.end(), std::back_inserter(triangles), [this](const int triangleNum){
+      // Return true if this isnt in the triangle corridor (and the corridor isnt being displayed)
+      if (displayTriangleCorridor_) {
+        if (std::find(pathfindingResult_->aStarInfo.triangleCorridor.begin(), pathfindingResult_->aStarInfo.triangleCorridor.end(), triangleNum) != pathfindingResult_->aStarInfo.triangleCorridor.end()) {
+          // This triangle is a part of the corridor
+          return false;
+        }
+      }
+      return true;
+    });
+    drawTriangles(painter, triangles, kTriangleColor);
+    painter.restore();
+  }
+}
+void NavmeshRenderArea::drawTrianglesVisited(QPainter &painter) {
+  if (pathfindingResult_ != nullptr) {
+    const QColor kTriangleColor(255, 127, 0, 33);
+    painter.save();
+    std::vector<int> triangles;
+    std::copy_if(pathfindingResult_->aStarInfo.trianglesDiscovered.begin(), pathfindingResult_->aStarInfo.trianglesDiscovered.end(), std::back_inserter(triangles), [this](const int triangleNum){
+      // Return true if this isnt in the triangle corridor (and the corridor isnt being displayed)
+      if (displayTriangleCorridor_) {
+        if (std::find(pathfindingResult_->aStarInfo.triangleCorridor.begin(), pathfindingResult_->aStarInfo.triangleCorridor.end(), triangleNum) != pathfindingResult_->aStarInfo.triangleCorridor.end()) {
+          // This triangle is a part of the corridor
+          return false;
+        }
+      }
+      if (displayTrianglesCompletelySearched_) {
+        if (std::find(pathfindingResult_->aStarInfo.trianglesSearched.begin(), pathfindingResult_->aStarInfo.trianglesSearched.end(), triangleNum) != pathfindingResult_->aStarInfo.trianglesSearched.end()) {
+          // This triangle is a part of the completely searched triangles
+          return false;
+        }
+      }
+      return true;
+    });
+    drawTriangles(painter, triangles, kTriangleColor);
+    painter.restore();
+  }
+}
+
+void NavmeshRenderArea::drawTriangles(QPainter &painter, const std::vector<int> &triangles, const QColor &color) {
+  painter.setPen(Qt::NoPen);
+  painter.setBrush(QBrush(color));
+  for (int triangleNum : triangles) {
+    const int vertexAIndex = triangleData_->trianglelist[triangleNum*3];
+    const int vertexBIndex = triangleData_->trianglelist[triangleNum*3+1];
+    const int vertexCIndex = triangleData_->trianglelist[triangleNum*3+2];
+    if (vertexAIndex == -1 || vertexBIndex == -1 || vertexCIndex == -1) {
+      throw std::runtime_error("A triangle references a nonexistent vertex");
+    }
+    const auto &vertexA = Vector{triangleData_->pointlist[vertexAIndex*2], triangleData_->pointlist[vertexAIndex*2+1]};
+    const auto &vertexB = Vector{triangleData_->pointlist[vertexBIndex*2], triangleData_->pointlist[vertexBIndex*2+1]};
+    const auto &vertexC = Vector{triangleData_->pointlist[vertexCIndex*2], triangleData_->pointlist[vertexCIndex*2+1]};
+    const auto transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(vertexA);
+    const auto transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(vertexB);
+    const auto transformedVertexC = transformNavmeshCoordinateToWidgetCoordinate(vertexC);
+    QPolygonF triangle;
+    triangle << QPointF{transformedVertexA.x(),transformedVertexA.y()} << QPointF{transformedVertexB.x(),transformedVertexB.y()} << QPointF{transformedVertexC.x(),transformedVertexC.y()};
+    painter.drawPolygon(triangle);
+  }
+}
+
 void NavmeshRenderArea::drawVertexLabels(QPainter &painter) {
   if (triangleData_ != nullptr) {
     // Make sure we have a navmesh
@@ -305,7 +381,7 @@ void NavmeshRenderArea::drawTriangleLabels(QPainter &painter) {
       const int vertexBIndex = triangleData_->trianglelist[i*3+1];
       const int vertexCIndex = triangleData_->trianglelist[i*3+2];
       if (vertexAIndex == -1 || vertexBIndex == -1 || vertexCIndex == -1) {
-        throw std::runtime_error("A triangle in the triangle references a nonexistent vertex");
+        throw std::runtime_error("A triangle references a nonexistent vertex");
       }
       const auto &vertexA = Vector{triangleData_->pointlist[vertexAIndex*2], triangleData_->pointlist[vertexAIndex*2+1]};
       const auto &vertexB = Vector{triangleData_->pointlist[vertexBIndex*2], triangleData_->pointlist[vertexBIndex*2+1]};
@@ -381,6 +457,18 @@ void NavmeshRenderArea::paintEvent(QPaintEvent * /* event */) {
   drawVertices(painter);
   drawEdges(painter);
 
+  if (displayTriangleCorridor_) {
+    drawTriangleCorridor(painter);
+  }
+
+  if (displayTrianglesCompletelySearched_) {
+    drawTrianglesCompletelySearched(painter);
+  }
+
+  if (displayTrianglesVisited_) {
+    drawTrianglesVisited(painter);
+  }
+
   // Draw pathfinding data
   drawShortestPath(painter);
   drawPathfindingStartAndGoal(painter);
@@ -399,6 +487,21 @@ void NavmeshRenderArea::paintEvent(QPaintEvent * /* event */) {
 
 void NavmeshRenderArea::setDisplayNonConstraintEdges(bool shouldDisplay) {
   displayNonConstraintEdges_ = shouldDisplay;
+  update();
+}
+
+void NavmeshRenderArea::setDisplayTriangleCorridor(bool shouldDisplay) {
+  displayTriangleCorridor_ = shouldDisplay;
+  update();
+}
+
+void NavmeshRenderArea::setDisplayTrianglesCompletelySearched(bool shouldDisplay) {
+  displayTrianglesCompletelySearched_ = shouldDisplay;
+  update();
+}
+
+void NavmeshRenderArea::setDisplayTrianglesVisited(bool shouldDisplay) {
+  displayTrianglesVisited_ = shouldDisplay;
   update();
 }
 

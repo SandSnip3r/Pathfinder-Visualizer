@@ -48,6 +48,11 @@ private:
 
   // Display configurations
   bool displayNonConstraintEdges_{false};
+
+  bool displayTriangleCorridor_{false};
+  bool displayTrianglesCompletelySearched_{false};
+  bool displayTrianglesVisited_{false};
+
   bool displayTriangleLabels_{false};
   bool displayEdgeLabels_{false};
   bool displayVertexLabels_{false};
@@ -65,8 +70,14 @@ private:
   QSize currentSize() const;
   void drawVertices(QPainter &painter);
   void drawEdges(QPainter &painter);
+
   void drawShortestPath(QPainter &painter);
   void drawPathfindingStartAndGoal(QPainter &painter);
+  void drawTriangles(QPainter &painter, const std::vector<int> &triangles, const QColor &color);
+  void drawTriangleCorridor(QPainter &painter);
+  void drawTrianglesCompletelySearched(QPainter &painter);
+  void drawTrianglesVisited(QPainter &painter);
+
   void drawVertexLabels(QPainter &painter);
   void drawEdgeLabels(QPainter &painter);
   void drawTriangleLabels(QPainter &painter);
@@ -83,6 +94,9 @@ signals:
 
 public slots:
   void setDisplayNonConstraintEdges(bool shouldDisplay);
+  void setDisplayTriangleCorridor(bool shouldDisplay);
+  void setDisplayTrianglesCompletelySearched(bool shouldDisplay);
+  void setDisplayTrianglesVisited(bool shouldDisplay);
   void setDisplayTriangleLabels(bool shouldDisplay);
   void setDisplayEdgeLabels(bool shouldDisplay);
   void setDisplayVertexLabels(bool shouldDisplay);

@@ -34,6 +34,9 @@ private:
   QSlider *agentRadiusSlider_;
 
   QCheckBox *nonConstraintEdgesCheckBox_;
+  QCheckBox *triangleCorridorCheckBox_;
+  QCheckBox *trianglesCompletelySearchedCheckBox_;
+  QCheckBox *trianglesVisitedCheckBox_;
   QCheckBox *triangleLabelsCheckBox_;
   QCheckBox *edgeLabelsCheckBox_;
   QCheckBox *vertexLabelsCheckBox_;
