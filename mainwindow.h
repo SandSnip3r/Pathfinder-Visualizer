@@ -21,7 +21,7 @@ public:
   MainWindow(QWidget *parent = nullptr);
   ~MainWindow();
 private:
-  const QString kSampleNavmeshFileName_{tr("./sample.poly")};
+  const QString kSampleNavmeshFileName_{tr("./maze.poly")};
 
   // Toolbar UI elements
   QAction *dragAction_;

@@ -248,7 +248,7 @@ void MainWindow::openNavmeshFile(const QString &filename) {
   } catch (std::exception &ex) {
     // Could not open the file
     QMessageBox msgBox;
-    msgBox.setText("Could not open file \""+filename+"\". The file may have invalid .poly format.");
+    msgBox.setText("Could not open file \""+filename+"\". The file may have invalid .poly format. Error: \""+ex.what()+"\"");
     msgBox.exec();
 
     // Need to re-prompt user to open another file
@@ -320,7 +320,7 @@ void MainWindow::rebuildPath() {
     pathfinder.setCharacterRadius(agentRadius_);
     pathfindingResult_ = pathfinder.findShortestPath(*startPoint_, *goalPoint_);
     navmeshDisplay_->setPath(pathfindingResult_);
-  } catch (std::exception &ex) {
+  } catch (...) {
     // Unable to build path
     navmeshDisplay_->resetPath();
   }
