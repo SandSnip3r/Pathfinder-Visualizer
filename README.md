@@ -41,6 +41,9 @@ _Note: Pathfinder issues are not listed here_
 
 - Additional configuration parameters for the pathfinding algorithm
   - Such as heuristic weighting, optimal search, etc.
+- Show why a path could not be found
+- Display how long the path took to be built
+- Show current cursor position
 - As Pathfinder grows, this too will grow
 
 ## Contributing
