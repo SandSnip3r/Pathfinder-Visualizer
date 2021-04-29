@@ -52,4 +52,4 @@ Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on the process for 
 
 ## Authors
 
-- Victor Stone - [LinkedIn](https://www.linkedin.com/in/sandsnip3r/)
+- Victor Stone
