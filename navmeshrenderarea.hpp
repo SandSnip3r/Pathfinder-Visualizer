@@ -24,10 +24,10 @@ public:
   void zoomOut(double zoomDiff);
 
   void setAgentRadius(double agentRadius);
-  void setNavmesh(const triangleio &triangleData);
-  void setPathStartPoint(const Vector &point);
-  void setPathGoalPoint(const Vector &point);
-  void setPath(const PathfindingResult &pathfindingResult);
+  void setNavmesh(const triangle::triangleio &triangleData);
+  void setPathStartPoint(const pathfinder::Vector &point);
+  void setPathGoalPoint(const pathfinder::Vector &point);
+  void setPath(const pathfinder::PathfindingResult &pathfindingResult);
   void resetPathStart();
   void resetPathGoal();
   void resetPath();
@@ -58,13 +58,13 @@ private:
   bool displayVertexLabels_{false};
 
   // Navmesh data
-  const triangleio *triangleData_{nullptr};
+  const triangle::triangleio *triangleData_{nullptr};
 
   // Pathfinding data
   double agentRadius_{0.0};
-  std::optional<Vector> startPoint_;
-  std::optional<Vector> goalPoint_;
-  const PathfindingResult *pathfindingResult_{nullptr};
+  std::optional<pathfinder::Vector> startPoint_;
+  std::optional<pathfinder::Vector> goalPoint_;
+  const pathfinder::PathfindingResult *pathfindingResult_{nullptr};
 
   void setSizeBasedOnNavmesh();
   QSize currentSize() const;
@@ -85,12 +85,12 @@ private:
   void resizeForNewZoom();
   double getScale() const;
 
-  Vector transformWidgetCoordinateToNavmeshCoordinate(const Vector &v) const;
-  Vector transformNavmeshCoordinateToWidgetCoordinate(const Vector &v) const;
-  Vector transformVectorToRenderArea(const Vector &v) const;
+  pathfinder::Vector transformWidgetCoordinateToNavmeshCoordinate(const pathfinder::Vector &v) const;
+  pathfinder::Vector transformNavmeshCoordinateToWidgetCoordinate(const pathfinder::Vector &v) const;
+  pathfinder::Vector transformVectorToRenderArea(const pathfinder::Vector &v) const;
 
 signals:
-  void draggingMouseOnNavmesh(const Vector &navmeshPoint);
+  void draggingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint);
 
 public slots:
   void setDisplayNonConstraintEdges(bool shouldDisplay);

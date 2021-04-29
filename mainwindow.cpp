@@ -189,17 +189,17 @@ void MainWindow::openNavmeshFilePrompt() {
   }
 }
 
-void MainWindow::movePathStart(const Vector &pos) {
+void MainWindow::movePathStart(const pathfinder::Vector &pos) {
   startPoint_ = pos;
   navmeshDisplay_->setPathStartPoint(pos);
 }
 
-void MainWindow::movePathGoal(const Vector &pos) {
+void MainWindow::movePathGoal(const pathfinder::Vector &pos) {
   goalPoint_ = pos;
   navmeshDisplay_->setPathGoalPoint(pos);
 }
 
-void MainWindow::draggingMouseOnNavmesh(const Vector &navmeshPoint) {
+void MainWindow::draggingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint) {
   if (movePathStartEnabled_) {
     movePathStart(navmeshPoint);
   }
@@ -257,29 +257,29 @@ void MainWindow::openNavmeshFile(const QString &filename) {
 }
 
 void MainWindow::initializeNavmeshTriangleData() {
-	triangle_initialize_triangleio(&savedTriangleData_);
-	triangle_initialize_triangleio(&savedTriangleVoronoiData_);
+	triangle::triangle_initialize_triangleio(&savedTriangleData_);
+	triangle::triangle_initialize_triangleio(&savedTriangleVoronoiData_);
 }
 
 void MainWindow::buildNavmeshFromFile(QString fileName) {
-  triangleio inputData;
-  triangle_initialize_triangleio(&inputData);
+  triangle::triangleio inputData;
+  triangle::triangle_initialize_triangleio(&inputData);
 
   int firstNode;
   // Call Triangle's file reading function
-  int readFileResult = triangle_read_poly(fileName.toStdString().c_str(), &inputData, &firstNode);
+  int readFileResult = triangle::triangle_read_poly(fileName.toStdString().c_str(), &inputData, &firstNode);
   if (readFileResult < 0) {
     throw std::runtime_error("Unable to open .poly file, error "+std::to_string(readFileResult));
   }
 
   // Create a context
-  context *ctx;
-  ctx = triangle_context_create();
+  triangle::context *ctx;
+  ctx = triangle::triangle_context_create();
   // Set context's behavior
   *(ctx->b) = behaviorBuilder_.getBehavior();
 
   // Build the triangle mesh
-  int meshCreateResult = triangle_mesh_create(ctx, &inputData);
+  int meshCreateResult = triangle::triangle_mesh_create(ctx, &inputData);
   if (meshCreateResult < 0) {
     // Free memory
     triangle_free_triangleio(&inputData);
@@ -294,7 +294,7 @@ void MainWindow::buildNavmeshFromFile(QString fileName) {
   initializeNavmeshTriangleData();
 
   // Copy data
-  int copyResult = triangle_mesh_copy(ctx, &savedTriangleData_, 1, 1, &savedTriangleVoronoiData_);
+  int copyResult = triangle::triangle_mesh_copy(ctx, &savedTriangleData_, 1, 1, &savedTriangleVoronoiData_);
   if (copyResult < 0) {
     // Free memory
     triangle_free_triangleio(&inputData);
@@ -316,7 +316,7 @@ void MainWindow::rebuildPath() {
     return;
   }
   try {
-    Pathfinder pathfinder(savedTriangleData_, savedTriangleVoronoiData_);
+    pathfinder::Pathfinder pathfinder(savedTriangleData_, savedTriangleVoronoiData_);
     pathfinder.setCharacterRadius(agentRadius_);
     pathfindingResult_ = pathfinder.findShortestPath(*startPoint_, *goalPoint_);
     navmeshDisplay_->setPath(pathfindingResult_);

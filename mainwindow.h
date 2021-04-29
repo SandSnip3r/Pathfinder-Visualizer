@@ -57,9 +57,9 @@ private:
   void setAgentRadiusSlider();
 
   // Navmesh data
-  triangleio savedTriangleData_;
-  triangleio savedTriangleVoronoiData_;
-  BehaviorBuilder behaviorBuilder_;
+  triangle::triangleio savedTriangleData_;
+  triangle::triangleio savedTriangleVoronoiData_;
+  pathfinder::BehaviorBuilder behaviorBuilder_;
   // Navmesh functions
   void initializeInputTriangleData();
   void initializeNavmeshTriangleData();
@@ -70,18 +70,18 @@ private:
   double agentRadius_{5};
   bool movePathStartEnabled_{false};
   bool movePathGoalEnabled_{false};
-  std::optional<Vector> startPoint_;
-  std::optional<Vector> goalPoint_;
-  PathfindingResult pathfindingResult_;
+  std::optional<pathfinder::Vector> startPoint_;
+  std::optional<pathfinder::Vector> goalPoint_;
+  pathfinder::PathfindingResult pathfindingResult_;
 
   // Path functions
   void rebuildPath();
-  void movePathStart(const Vector &pos);
-  void movePathGoal(const Vector &pos);
+  void movePathStart(const pathfinder::Vector &pos);
+  void movePathGoal(const pathfinder::Vector &pos);
 
 private slots:
   void openNavmeshFilePrompt();
-  void draggingMouseOnNavmesh(const Vector &navmeshPoint);
+  void draggingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint);
   void setMovePathStartEnabled(bool enabled);
   void setMovePathGoalEnabled(bool enabled);
   void agentRadiusTextChanged(const QString &text);

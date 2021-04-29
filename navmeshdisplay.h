@@ -14,10 +14,10 @@ class NavmeshDisplay : public QWidget {
 public:
   explicit NavmeshDisplay(QWidget *parent = nullptr);
   NavmeshRenderArea* getNavmeshRenderArea();
-  void setNavmesh(const triangleio &triangleData);
-  void setPathStartPoint(const Vector &pos);
-  void setPathGoalPoint(const Vector &pos);
-  void setPath(const PathfindingResult &pathfindingResult);
+  void setNavmesh(const triangle::triangleio &triangleData);
+  void setPathStartPoint(const pathfinder::Vector &pos);
+  void setPathGoalPoint(const pathfinder::Vector &pos);
+  void setPath(const pathfinder::PathfindingResult &pathfindingResult);
   void resetPathStart();
   void resetPathGoal();
   void resetPath();
@@ -32,8 +32,8 @@ private:
   QLabel *totalEdgeCountLabel_;
   QLabel *constrainedEdgeCountLabel_;
   QWidget* createTextDisplayArea();
-  QString pathStartPointLabelContents(const std::optional<Vector> &pos = {}) const;
-  QString pathGoalPointLabelContents(const std::optional<Vector> &pos = {}) const;
+  QString pathStartPointLabelContents(const std::optional<pathfinder::Vector> &pos = {}) const;
+  QString pathGoalPointLabelContents(const std::optional<pathfinder::Vector> &pos = {}) const;
   QString pathLengthLabelContents(const std::optional<double> &length = {}) const;
   QString vertexCountLabelContents(const std::optional<int> &count = {}) const;
   QString triangleCountLabelContents(const std::optional<int> &count = {}) const;

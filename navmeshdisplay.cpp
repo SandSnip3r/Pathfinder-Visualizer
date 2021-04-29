@@ -74,7 +74,7 @@ NavmeshRenderArea* NavmeshDisplay::getNavmeshRenderArea() {
   return navmeshRenderArea_;
 }
 
-void NavmeshDisplay::setNavmesh(const triangleio &triangleData) {
+void NavmeshDisplay::setNavmesh(const triangle::triangleio &triangleData) {
   navmeshRenderArea_->setNavmesh(triangleData);
   vertexCountLabel_->setText(vertexCountLabelContents(triangleData.numberofpoints));
   triangleCountLabel_->setText(triangleCountLabelContents(triangleData.numberoftriangles));
@@ -93,17 +93,17 @@ void NavmeshDisplay::setNavmesh(const triangleio &triangleData) {
   constrainedEdgeCountLabel_->setText(constrainedEdgeCountLabelContents(constrainedEdgeCount));
 }
 
-void NavmeshDisplay::setPathStartPoint(const Vector &pos) {
+void NavmeshDisplay::setPathStartPoint(const pathfinder::Vector &pos) {
   navmeshRenderArea_->setPathStartPoint(pos);
   pathStartPositionLabel_->setText(pathStartPointLabelContents(pos));
 }
 
-void NavmeshDisplay::setPathGoalPoint(const Vector &pos) {
+void NavmeshDisplay::setPathGoalPoint(const pathfinder::Vector &pos) {
   navmeshRenderArea_->setPathGoalPoint(pos);
   pathGoalPositionLabel_->setText(pathGoalPointLabelContents(pos));
 }
 
-void NavmeshDisplay::setPath(const PathfindingResult &pathfindingResult) {
+void NavmeshDisplay::setPath(const pathfinder::PathfindingResult &pathfindingResult) {
   navmeshRenderArea_->setPath(pathfindingResult);
   pathLengthLabel_->setText(pathLengthLabelContents(calculatePathLength(pathfindingResult.shortestPath)));
 }
@@ -129,7 +129,7 @@ void NavmeshDisplay::setDragModeEnabled(bool enabled) {
 
 // ===================================Label contents===================================
 
-QString NavmeshDisplay::pathStartPointLabelContents(const std::optional<Vector> &pos) const {
+QString NavmeshDisplay::pathStartPointLabelContents(const std::optional<pathfinder::Vector> &pos) const {
   if (pos) {
     return QString(tr("Path Start Point: %1,%2").arg(QString::number(pos->x(), 'f', 3), QString::number(pos->y(), 'f', 3)));
   } else {
@@ -137,7 +137,7 @@ QString NavmeshDisplay::pathStartPointLabelContents(const std::optional<Vector> 
   }
 }
 
-QString NavmeshDisplay::pathGoalPointLabelContents(const std::optional<Vector> &pos) const {
+QString NavmeshDisplay::pathGoalPointLabelContents(const std::optional<pathfinder::Vector> &pos) const {
   if (pos) {
     return QString(tr("Path Goal Point: %1,%2").arg(QString::number(pos->x(), 'f', 3), QString::number(pos->y(), 'f', 3)));
   } else {
