@@ -180,6 +180,7 @@ void MainWindow::createConnectionsToNavmeshDisplay() {
 
   // Mouse event handling
   connect(navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::draggingMouseOnNavmesh, this, &MainWindow::draggingMouseOnNavmesh);
+  connect(navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::movingMouseOnNavmesh, this, &MainWindow::movingMouseOnNavmesh);
 }
 
 void MainWindow::openNavmeshFilePrompt() {
@@ -192,11 +193,21 @@ void MainWindow::openNavmeshFilePrompt() {
 void MainWindow::movePathStart(const pathfinder::Vector &pos) {
   startPoint_ = pos;
   navmeshDisplay_->setPathStartPoint(pos);
+
+  if (startPoint_ && goalPoint_) {
+    // Have both start and goal
+    rebuildPath();
+  }
 }
 
 void MainWindow::movePathGoal(const pathfinder::Vector &pos) {
   goalPoint_ = pos;
   navmeshDisplay_->setPathGoalPoint(pos);
+
+  if (startPoint_ && goalPoint_) {
+    // Have both start and goal
+    rebuildPath();
+  }
 }
 
 void MainWindow::draggingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint) {
@@ -206,10 +217,10 @@ void MainWindow::draggingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint) 
   if (movePathGoalEnabled_) {
     movePathGoal(navmeshPoint);
   }
-  if (startPoint_ && goalPoint_) {
-    // Have both start and goal
-    rebuildPath();
-  }
+}
+
+void MainWindow::movingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint) {
+  navmeshDisplay_->setMousePosition(navmeshPoint);
 }
 
 void MainWindow::setMovePathStartEnabled(bool enabled) {
@@ -320,8 +331,9 @@ void MainWindow::rebuildPath() {
     pathfinder.setCharacterRadius(agentRadius_);
     pathfindingResult_ = pathfinder.findShortestPath(*startPoint_, *goalPoint_);
     navmeshDisplay_->setPath(pathfindingResult_);
-  } catch (...) {
+  } catch (std::exception &ex) {
     // Unable to build path
+    std::cout << "Unable to build path. Exception: \"" << ex.what() << "\"" << std::endl;
     navmeshDisplay_->resetPath();
   }
 }

@@ -41,10 +41,12 @@ QWidget* NavmeshDisplay::createTextDisplayArea() {
   triangleCountLabel_ = new QLabel(triangleCountLabelContents());
   totalEdgeCountLabel_ = new QLabel(totalEdgeCountLabelContents());
   constrainedEdgeCountLabel_ = new QLabel(constrainedEdgeCountLabelContents());
+  mousePositionLabel_ = new QLabel(mousePositionLabelContents());
   navmeshInfoLayout->addWidget(vertexCountLabel_);
   navmeshInfoLayout->addWidget(triangleCountLabel_);
   navmeshInfoLayout->addWidget(totalEdgeCountLabel_);
   navmeshInfoLayout->addWidget(constrainedEdgeCountLabel_);
+  navmeshInfoLayout->addWidget(mousePositionLabel_);
   navmeshInfoLayout->setAlignment(Qt::AlignTop);
   navmeshInfoGroupBox->setLayout(navmeshInfoLayout);
   // Add this groupbox to the overall layout
@@ -101,6 +103,10 @@ void NavmeshDisplay::setPathStartPoint(const pathfinder::Vector &pos) {
 void NavmeshDisplay::setPathGoalPoint(const pathfinder::Vector &pos) {
   navmeshRenderArea_->setPathGoalPoint(pos);
   pathGoalPositionLabel_->setText(pathGoalPointLabelContents(pos));
+}
+
+void NavmeshDisplay::setMousePosition(const pathfinder::Vector &pos) {
+  mousePositionLabel_->setText(mousePositionLabelContents(pos));
 }
 
 void NavmeshDisplay::setPath(const pathfinder::PathfindingResult &pathfindingResult) {
@@ -182,5 +188,13 @@ QString NavmeshDisplay::constrainedEdgeCountLabelContents(const std::optional<in
     return QString(tr("Number of constrained edges: %1").arg(QString::number(*count)));
   } else {
     return QString(tr("Number of constrained edges: None"));
+  }
+}
+
+QString NavmeshDisplay::mousePositionLabelContents(const std::optional<pathfinder::Vector> &pos) const {
+  if (pos) {
+    return QString(tr("Mouse Position: %1,%2").arg(QString::number(pos->x(), 'f', 3), QString::number(pos->y(), 'f', 3)));
+  } else {
+    return QString(tr("Mouse Position: None"));
   }
 }

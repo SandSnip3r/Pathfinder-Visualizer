@@ -8,6 +8,7 @@
 #include <iostream>
 
 NavmeshRenderArea::NavmeshRenderArea(QWidget *parent) : QWidget(parent) {
+  setMouseTracking(true);
   setBackgroundRole(QPalette::Base);
   setAutoFillBackground(true);
 }
@@ -62,24 +63,36 @@ void NavmeshRenderArea::setHandleMouseDrag(bool enabled) {
 
 void NavmeshRenderArea::mouseMoveEvent(QMouseEvent *event) {
   bool handled = false;
+  const auto mouseLocalPos = event->localPos();
+  std::optional<pathfinder::Vector> navmeshPoint;
+  if (mouseLocalPos.x() >= 0 && mouseLocalPos.x() < width() &&
+      mouseLocalPos.y() >= 0 && mouseLocalPos.y() < height()) {
+    // Mouse is within the widget
+    const auto tmpPoint = transformWidgetCoordinateToNavmeshCoordinate(pathfinder::Vector{mouseLocalPos.x(), mouseLocalPos.y()});
+    if (tmpPoint.x() >= navmeshMinX_ && tmpPoint.x() <= navmeshMinX_+navmeshWidth_ &&
+        tmpPoint.y() >= navmeshMinY_ && tmpPoint.y() <= navmeshMinY_+navmeshHeight_) {
+      // Mouse is on the navmesh
+      navmeshPoint = tmpPoint;
+    }
+  }
+
+  if (navmeshPoint) {
+    // Mouse is on the navmesh
+    emit movingMouseOnNavmesh(*navmeshPoint);
+  }
+
   if (event->buttons() & Qt::LeftButton) {
     // Dragging while left clicking
     if (handleMouseDrag_) {
       // We are supposed to be handling mouse input
-      const auto mouseLocalPos = event->localPos();
-      if (mouseLocalPos.x() >= 0 && mouseLocalPos.x() < width() &&
-          mouseLocalPos.y() >= 0 && mouseLocalPos.y() < height()) {
-        // Mouse is within the widget
-        auto navmeshPoint = transformWidgetCoordinateToNavmeshCoordinate(pathfinder::Vector{mouseLocalPos.x(), mouseLocalPos.y()});
-        if (navmeshPoint.x() >= navmeshMinX_ && navmeshPoint.x() <= navmeshMinX_+navmeshWidth_ &&
-            navmeshPoint.y() >= navmeshMinY_ && navmeshPoint.y() <= navmeshMinY_+navmeshHeight_) {
-          // Mouse is on the navmesh
-          emit draggingMouseOnNavmesh(navmeshPoint);
-          handled = true;
-        }
+      if (navmeshPoint) {
+        // Mouse is on the navmesh
+        emit draggingMouseOnNavmesh(*navmeshPoint);
+        handled = true;
       }
     }
   }
+
   if (handled) {
     event->accept();
   } else {
@@ -191,9 +204,14 @@ void NavmeshRenderArea::drawShortestPath(QPainter &painter) {
       const pathfinder::StraightPathSegment *straightSegment = dynamic_cast<const pathfinder::StraightPathSegment*>(segment);
       const pathfinder::ArcPathSegment *arcSegment = dynamic_cast<const pathfinder::ArcPathSegment*>(segment);
       if (straightSegment != nullptr) {
-        const auto &point1 = transformNavmeshCoordinateToWidgetCoordinate(straightSegment->startPoint);
-        const auto &point2 = transformNavmeshCoordinateToWidgetCoordinate(straightSegment->endPoint);
-        painter.drawLine(QPointF{point1.x(), point1.y()}, QPointF{point2.x(), point2.y()});
+        if (!pathfinder::math::equal(straightSegment->startPoint.x(), straightSegment->endPoint.x()) || !pathfinder::math::equal(straightSegment->startPoint.y(), straightSegment->endPoint.y())) {
+          // Don't want to draw a straight line that has length 0. Results in weird rendering
+          const auto &point1 = transformNavmeshCoordinateToWidgetCoordinate(straightSegment->startPoint);
+          const auto &point2 = transformNavmeshCoordinateToWidgetCoordinate(straightSegment->endPoint);
+          painter.drawLine(QPointF{point1.x(), point1.y()}, QPointF{point2.x(), point2.y()});
+        } else {
+          throw std::runtime_error("One of the line segments is 0-length. This indicates that something has gone wrong");
+        }
       } else if (arcSegment != nullptr) {
         const auto &centerOfCircle = arcSegment->circleCenter;
         const auto transformedCenter = transformNavmeshCoordinateToWidgetCoordinate(centerOfCircle);
@@ -325,8 +343,7 @@ void NavmeshRenderArea::drawVertexLabels(QPainter &painter) {
     painter.save();
 
     QFont f;
-    // TODO: Scale font based on zoom?
-    f.setPointSizeF(10);
+    f.setPointSizeF(std::clamp(10/getScale(), 1.0, 10.0));
     painter.setFont(f);
     painter.setPen(QPen(QColor(0,100,255)));
 
@@ -345,8 +362,7 @@ void NavmeshRenderArea::drawEdgeLabels(QPainter &painter) {
     painter.save();
 
     QFont f;
-    // TODO: Scale font based on zoom?
-    f.setPointSizeF(10);
+    f.setPointSizeF(std::clamp(10/getScale(), 1.0, 10.0));
     painter.setFont(f);
     painter.setPen(Qt::GlobalColor::red);
 
@@ -372,8 +388,7 @@ void NavmeshRenderArea::drawTriangleLabels(QPainter &painter) {
     painter.save();
 
     QFont f;
-    // TODO: Scale font based on zoom?
-    f.setPointSizeF(10);
+    f.setPointSizeF(std::clamp(10/getScale(), 1.0, 10.0));
     painter.setFont(f);
 
     for (int i=0; i<triangleData_->numberoftriangles; ++i) {

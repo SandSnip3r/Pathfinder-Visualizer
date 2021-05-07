@@ -67,7 +67,7 @@ private:
   void buildNavmeshFromFile(QString fileName);
 
   // Path data
-  double agentRadius_{5};
+  double agentRadius_{5.0};
   bool movePathStartEnabled_{false};
   bool movePathGoalEnabled_{false};
   std::optional<pathfinder::Vector> startPoint_;
@@ -82,6 +82,7 @@ private:
 private slots:
   void openNavmeshFilePrompt();
   void draggingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint);
+  void movingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint);
   void setMovePathStartEnabled(bool enabled);
   void setMovePathGoalEnabled(bool enabled);
   void agentRadiusTextChanged(const QString &text);

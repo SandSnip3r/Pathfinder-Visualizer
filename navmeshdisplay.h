@@ -17,6 +17,7 @@ public:
   void setNavmesh(const triangle::triangleio &triangleData);
   void setPathStartPoint(const pathfinder::Vector &pos);
   void setPathGoalPoint(const pathfinder::Vector &pos);
+  void setMousePosition(const pathfinder::Vector &pos);
   void setPath(const pathfinder::PathfindingResult &pathfindingResult);
   void resetPathStart();
   void resetPathGoal();
@@ -31,6 +32,7 @@ private:
   QLabel *triangleCountLabel_;
   QLabel *totalEdgeCountLabel_;
   QLabel *constrainedEdgeCountLabel_;
+  QLabel *mousePositionLabel_;
   QWidget* createTextDisplayArea();
   QString pathStartPointLabelContents(const std::optional<pathfinder::Vector> &pos = {}) const;
   QString pathGoalPointLabelContents(const std::optional<pathfinder::Vector> &pos = {}) const;
@@ -39,6 +41,7 @@ private:
   QString triangleCountLabelContents(const std::optional<int> &count = {}) const;
   QString totalEdgeCountLabelContents(const std::optional<int> &count = {}) const;
   QString constrainedEdgeCountLabelContents(const std::optional<int> &count = {}) const;
+  QString mousePositionLabelContents(const std::optional<pathfinder::Vector> &pos = {}) const;
 
 signals:
 public slots:

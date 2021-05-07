@@ -91,6 +91,7 @@ private:
 
 signals:
   void draggingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint);
+  void movingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint);
 
 public slots:
   void setDisplayNonConstraintEdges(bool shouldDisplay);
