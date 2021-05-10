@@ -17,8 +17,8 @@ QSize NavmeshRenderArea::minimumSizeHint() const {
   return currentSize();
 }
 
-void NavmeshRenderArea::setNavmesh(const triangle::triangleio &triangleData) {
-  triangleData_ = &triangleData;
+void NavmeshRenderArea::setNavmesh(const pathfinder::navmesh::NavmeshInterface &navmesh) {
+  navmesh_ = &navmesh;
   resetZoom();
   setSizeBasedOnNavmesh();
   update();
@@ -105,34 +105,35 @@ QSize NavmeshRenderArea::sizeHint() const {
 }
 
 void NavmeshRenderArea::setSizeBasedOnNavmesh() {
-  // Update size of render area to reflect newly parsed navmesh
-  navmeshMinX_ = std::numeric_limits<double>::max();
-  navmeshMinY_ = std::numeric_limits<double>::max();
-  double navmeshMaxX = std::numeric_limits<double>::lowest();
-  double navmeshMaxY = std::numeric_limits<double>::lowest();
-  for (int i=0; i<triangleData_->numberofpoints; ++i) {
-    const auto x = triangleData_->pointlist[i*2];
-    const auto y = triangleData_->pointlist[i*2+1];
-    if (x < navmeshMinX_) {
-      navmeshMinX_ = x;
+  if (navmesh_ != nullptr) {
+    // Update size of render area to reflect newly parsed navmesh
+    navmeshMinX_ = std::numeric_limits<double>::max();
+    navmeshMinY_ = std::numeric_limits<double>::max();
+    double navmeshMaxX = std::numeric_limits<double>::lowest();
+    double navmeshMaxY = std::numeric_limits<double>::lowest();
+    for (int vertexIndex=0; vertexIndex<navmesh_->getVertexCount(); ++vertexIndex) {
+      const auto &vertex = navmesh_->getVertex(vertexIndex);
+      if (vertex.x() < navmeshMinX_) {
+        navmeshMinX_ = vertex.x();
+      }
+      if (vertex.x() > navmeshMaxX) {
+        navmeshMaxX = vertex.x();
+      }
+      if (vertex.y() < navmeshMinY_) {
+        navmeshMinY_ = vertex.y();
+      }
+      if (vertex.y() > navmeshMaxY) {
+        navmeshMaxY = vertex.y();
+      }
     }
-    if (x > navmeshMaxX) {
-      navmeshMaxX = x;
-    }
-    if (y < navmeshMinY_) {
-      navmeshMinY_ = y;
-    }
-    if (y > navmeshMaxY) {
-      navmeshMaxY = y;
-    }
+    navmeshWidth_ = navmeshMaxX - navmeshMinX_;
+    navmeshHeight_ = navmeshMaxY - navmeshMinY_;
+    widgetBaseWidth_ = navmeshWidth_ + 2*kMargin_;
+    widgetBaseHeight_ = navmeshHeight_ + 2*kMargin_;
+    setMinimumSize(widgetBaseWidth_, widgetBaseHeight_);
+    resize(widgetBaseWidth_, widgetBaseHeight_);
+    updateGeometry();
   }
-  navmeshWidth_ = navmeshMaxX - navmeshMinX_;
-  navmeshHeight_ = navmeshMaxY - navmeshMinY_;
-  widgetBaseWidth_ = navmeshWidth_ + 2*kMargin_;
-  widgetBaseHeight_ = navmeshHeight_ + 2*kMargin_;
-  setMinimumSize(widgetBaseWidth_, widgetBaseHeight_);
-  resize(widgetBaseWidth_, widgetBaseHeight_);
-  updateGeometry();
 }
 
 QSize NavmeshRenderArea::currentSize() const {
@@ -141,11 +142,11 @@ QSize NavmeshRenderArea::currentSize() const {
 }
 
 void NavmeshRenderArea::drawVertices(QPainter &painter) {
-  if (triangleData_ != nullptr) {
+  if (navmesh_ != nullptr) {
     // Make sure we have a navmesh
     const float kPointRadius = 1.5 / getScale();
-    for (int i=0; i<triangleData_->numberofpoints; ++i) {
-      const pathfinder::Vector vertex{triangleData_->pointlist[i*2], triangleData_->pointlist[i*2+1]};
+    for (int vertexIndex=0; vertexIndex<navmesh_->getVertexCount(); ++vertexIndex) {
+      const auto &vertex = navmesh_->getVertex(vertexIndex);
       const auto transformedVertex = transformNavmeshCoordinateToWidgetCoordinate(vertex);
       painter.drawEllipse(QPointF{transformedVertex.x(), transformedVertex.y()}, kPointRadius, kPointRadius);
     }
@@ -153,24 +154,20 @@ void NavmeshRenderArea::drawVertices(QPainter &painter) {
 }
 
 void NavmeshRenderArea::drawEdges(QPainter &painter) {
-  if (triangleData_ != nullptr) {
+  if (navmesh_ != nullptr) {
     // Make sure we have a navmesh
     painter.save();
     QPen pen;
     pen.setWidth(0);
-    for (int i=0; i<triangleData_->numberofedges; ++i) {
-      const int vertexAIndex = triangleData_->edgelist[i*2];
-      const int vertexBIndex = triangleData_->edgelist[i*2+1];
-      if (vertexAIndex == -1 || vertexBIndex == -1) {
-        throw std::runtime_error("An edge in the triangle references a nonexistent vertex");
-      }
-      const int marker = triangleData_->edgemarkerlist[i];
+    for (int edgeIndex=0; edgeIndex<navmesh_->getEdgeCount(); ++edgeIndex) {
+      const int marker = navmesh_->getEdgeMarker(edgeIndex);
       if (!displayNonConstraintEdges_ && marker <= 1) {
         // Do not display non-input edges
         continue;
       }
-      const pathfinder::Vector vertexA = transformNavmeshCoordinateToWidgetCoordinate(pathfinder::Vector{triangleData_->pointlist[vertexAIndex*2], triangleData_->pointlist[vertexAIndex*2+1]});
-      const pathfinder::Vector vertexB = transformNavmeshCoordinateToWidgetCoordinate(pathfinder::Vector{triangleData_->pointlist[vertexBIndex*2], triangleData_->pointlist[vertexBIndex*2+1]});
+      const auto &[vertexA, vertexB] = navmesh_->getEdge(edgeIndex);
+      const pathfinder::Vector transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(vertexA);
+      const pathfinder::Vector transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(vertexB);
       if (marker == 1) {
         // Boundary
         pen.setColor(QColor{100,100,100});
@@ -184,7 +181,7 @@ void NavmeshRenderArea::drawEdges(QPainter &painter) {
         pen.setColor(Qt::GlobalColor::red);
         painter.setPen(pen);
       }
-      painter.drawLine(QPointF(vertexA.x(), vertexA.y()), QPointF(vertexB.x(), vertexB.y()));
+      painter.drawLine(QPointF(transformedVertexA.x(), transformedVertexA.y()), QPointF(transformedVertexB.x(), transformedVertexB.y()));
     }
     painter.restore();
   }
@@ -316,29 +313,23 @@ void NavmeshRenderArea::drawTrianglesVisited(QPainter &painter) {
 }
 
 void NavmeshRenderArea::drawTriangles(QPainter &painter, const std::vector<int> &triangles, const QColor &color) {
-  painter.setPen(Qt::NoPen);
-  painter.setBrush(QBrush(color));
-  for (int triangleNum : triangles) {
-    const int vertexAIndex = triangleData_->trianglelist[triangleNum*3];
-    const int vertexBIndex = triangleData_->trianglelist[triangleNum*3+1];
-    const int vertexCIndex = triangleData_->trianglelist[triangleNum*3+2];
-    if (vertexAIndex == -1 || vertexBIndex == -1 || vertexCIndex == -1) {
-      throw std::runtime_error("A triangle references a nonexistent vertex");
+  if (navmesh_ != nullptr) {
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QBrush(color));
+    for (int triangleIndex : triangles) {
+      const auto &[vertexA, vertexB, vertexC] = navmesh_->getTriangleVertices(triangleIndex);
+      const auto transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(vertexA);
+      const auto transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(vertexB);
+      const auto transformedVertexC = transformNavmeshCoordinateToWidgetCoordinate(vertexC);
+      QPolygonF triangle;
+      triangle << QPointF{transformedVertexA.x(),transformedVertexA.y()} << QPointF{transformedVertexB.x(),transformedVertexB.y()} << QPointF{transformedVertexC.x(),transformedVertexC.y()};
+      painter.drawPolygon(triangle);
     }
-    const auto &vertexA = pathfinder::Vector{triangleData_->pointlist[vertexAIndex*2], triangleData_->pointlist[vertexAIndex*2+1]};
-    const auto &vertexB = pathfinder::Vector{triangleData_->pointlist[vertexBIndex*2], triangleData_->pointlist[vertexBIndex*2+1]};
-    const auto &vertexC = pathfinder::Vector{triangleData_->pointlist[vertexCIndex*2], triangleData_->pointlist[vertexCIndex*2+1]};
-    const auto transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(vertexA);
-    const auto transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(vertexB);
-    const auto transformedVertexC = transformNavmeshCoordinateToWidgetCoordinate(vertexC);
-    QPolygonF triangle;
-    triangle << QPointF{transformedVertexA.x(),transformedVertexA.y()} << QPointF{transformedVertexB.x(),transformedVertexB.y()} << QPointF{transformedVertexC.x(),transformedVertexC.y()};
-    painter.drawPolygon(triangle);
   }
 }
 
 void NavmeshRenderArea::drawVertexLabels(QPainter &painter) {
-  if (triangleData_ != nullptr) {
+  if (navmesh_ != nullptr) {
     // Make sure we have a navmesh
     painter.save();
 
@@ -347,17 +338,17 @@ void NavmeshRenderArea::drawVertexLabels(QPainter &painter) {
     painter.setFont(f);
     painter.setPen(QPen(QColor(0,100,255)));
 
-    for (int i=0; i<triangleData_->numberofpoints; ++i) {
-      const pathfinder::Vector vertex{triangleData_->pointlist[i*2], triangleData_->pointlist[i*2+1]};
+    for (int vertexIndex=0; vertexIndex<navmesh_->getVertexCount(); ++vertexIndex) {
+      const auto &vertex = navmesh_->getVertex(vertexIndex);
       const auto transformedVertex = transformNavmeshCoordinateToWidgetCoordinate(vertex);
-      painter.drawText(QPointF{transformedVertex.x(), transformedVertex.y()}, QString::number(i));
+      painter.drawText(QPointF{transformedVertex.x(), transformedVertex.y()}, QString::number(vertexIndex));
     }
     painter.restore();
   }
 }
 
 void NavmeshRenderArea::drawEdgeLabels(QPainter &painter) {
-  if (triangleData_ != nullptr) {
+  if (navmesh_ != nullptr) {
     // Make sure we have a navmesh
     painter.save();
 
@@ -366,16 +357,12 @@ void NavmeshRenderArea::drawEdgeLabels(QPainter &painter) {
     painter.setFont(f);
     painter.setPen(Qt::GlobalColor::red);
 
-    for (int i=0; i<triangleData_->numberofedges; ++i) {
-      const int vertexAIndex = triangleData_->edgelist[i*2];
-      const int vertexBIndex = triangleData_->edgelist[i*2+1];
-      if (vertexAIndex == -1 || vertexBIndex == -1) {
-        throw std::runtime_error("An edge in the triangle references a nonexistent vertex");
-      }
-      const pathfinder::Vector vertexA = transformNavmeshCoordinateToWidgetCoordinate(pathfinder::Vector{triangleData_->pointlist[vertexAIndex*2], triangleData_->pointlist[vertexAIndex*2+1]});
-      const pathfinder::Vector vertexB = transformNavmeshCoordinateToWidgetCoordinate(pathfinder::Vector{triangleData_->pointlist[vertexBIndex*2], triangleData_->pointlist[vertexBIndex*2+1]});
-      QPointF centerOfEdge{(vertexA.x()+vertexB.x())/2, (vertexA.y()+vertexB.y())/2};
-      painter.drawText(centerOfEdge, QString::number(i));
+    for (int edgeIndex=0; edgeIndex<navmesh_->getEdgeCount(); ++edgeIndex) {
+      const auto &[vertexA, vertexB] = navmesh_->getEdge(edgeIndex);
+      const auto transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(vertexA);
+      const auto transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(vertexB);
+      QPointF centerOfEdge{(transformedVertexA.x()+transformedVertexB.x())/2, (transformedVertexA.y()+transformedVertexB.y())/2};
+      painter.drawText(centerOfEdge, QString::number(edgeIndex));
     }
 
     painter.restore();
@@ -383,7 +370,7 @@ void NavmeshRenderArea::drawEdgeLabels(QPainter &painter) {
 }
 
 void NavmeshRenderArea::drawTriangleLabels(QPainter &painter) {
-  if (triangleData_ != nullptr) {
+  if (navmesh_ != nullptr) {
     // Make sure we have a navmesh
     painter.save();
 
@@ -391,18 +378,10 @@ void NavmeshRenderArea::drawTriangleLabels(QPainter &painter) {
     f.setPointSizeF(std::clamp(10/getScale(), 1.0, 10.0));
     painter.setFont(f);
 
-    for (int i=0; i<triangleData_->numberoftriangles; ++i) {
-      const int vertexAIndex = triangleData_->trianglelist[i*3];
-      const int vertexBIndex = triangleData_->trianglelist[i*3+1];
-      const int vertexCIndex = triangleData_->trianglelist[i*3+2];
-      if (vertexAIndex == -1 || vertexBIndex == -1 || vertexCIndex == -1) {
-        throw std::runtime_error("A triangle references a nonexistent vertex");
-      }
-      const auto &vertexA = pathfinder::Vector{triangleData_->pointlist[vertexAIndex*2], triangleData_->pointlist[vertexAIndex*2+1]};
-      const auto &vertexB = pathfinder::Vector{triangleData_->pointlist[vertexBIndex*2], triangleData_->pointlist[vertexBIndex*2+1]};
-      const auto &vertexC = pathfinder::Vector{triangleData_->pointlist[vertexCIndex*2], triangleData_->pointlist[vertexCIndex*2+1]};
+    for (int triangleIndex=0; triangleIndex<navmesh_->getTriangleCount(); ++triangleIndex) {
+      const auto &[vertexA, vertexB, vertexC] = navmesh_->getTriangleVertices(triangleIndex);
       const pathfinder::Vector triangleCenter = transformNavmeshCoordinateToWidgetCoordinate(pathfinder::Vector{(vertexA.x()+vertexB.x()+vertexC.x())/3, (vertexA.y()+vertexB.y()+vertexC.y())/3});
-      painter.drawText(QPointF{triangleCenter.x(), triangleCenter.y()}, QString::number(i));
+      painter.drawText(QPointF{triangleCenter.x(), triangleCenter.y()}, QString::number(triangleIndex));
     }
 
     painter.restore();

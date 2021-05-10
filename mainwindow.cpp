@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "navmeshdisplay.h"
 
+#include "triangle_lib_navmesh.h"
+
 #include <QDockWidget>
 #include <QFileDialog>
 #include <QGridLayout>
@@ -24,7 +26,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   setWindowTitle(tr("Pathfinder Visualization"));
 
   // Window is built, now lets try to open and display the sample navmesh file
-  initializeNavmeshTriangleData();
   openNavmeshFile(kSampleNavmeshFileName_);
 }
 
@@ -267,11 +268,6 @@ void MainWindow::openNavmeshFile(const QString &filename) {
   }
 }
 
-void MainWindow::initializeNavmeshTriangleData() {
-	triangle::triangle_initialize_triangleio(&savedTriangleData_);
-	triangle::triangle_initialize_triangleio(&savedTriangleVoronoiData_);
-}
-
 void MainWindow::buildNavmeshFromFile(QString fileName) {
   triangle::triangleio inputData;
   triangle::triangle_initialize_triangleio(&inputData);
@@ -299,13 +295,12 @@ void MainWindow::buildNavmeshFromFile(QString fileName) {
 
   // Now, the context holds the mesh, lets extract this data
   // First, prepare data structures
-  // Free in case this has already been used
-  triangle_free_triangleio(&savedTriangleData_);
-  triangle_free_triangleio(&savedTriangleVoronoiData_);
-  initializeNavmeshTriangleData();
+  triangle::triangleio triangleData, triangleVoronoiData;
+	triangle::triangle_initialize_triangleio(&triangleData);
+	triangle::triangle_initialize_triangleio(&triangleVoronoiData);
 
   // Copy data
-  int copyResult = triangle::triangle_mesh_copy(ctx, &savedTriangleData_, 1, 1, &savedTriangleVoronoiData_);
+  int copyResult = triangle::triangle_mesh_copy(ctx, &triangleData, 1, 1, &triangleVoronoiData);
   if (copyResult < 0) {
     // Free memory
     triangle_free_triangleio(&inputData);
@@ -318,7 +313,14 @@ void MainWindow::buildNavmeshFromFile(QString fileName) {
   // Done with context
   triangle_context_destroy(ctx);
 
-  navmeshDisplay_->setNavmesh(savedTriangleData_);
+  // Build navmesh from triangle data
+  navmesh_ = std::unique_ptr<pathfinder::navmesh::NavmeshInterface>(new pathfinder::navmesh::TriangleLibNavmesh(triangleData, triangleVoronoiData));
+
+  // Free
+  triangle_free_triangleio(&triangleData);
+  triangle_free_triangleio(&triangleVoronoiData);
+
+  navmeshDisplay_->setNavmesh(*navmesh_.get());
 }
 
 void MainWindow::rebuildPath() {
@@ -327,7 +329,7 @@ void MainWindow::rebuildPath() {
     return;
   }
   try {
-    pathfinder::Pathfinder pathfinder(savedTriangleData_, savedTriangleVoronoiData_);
+    pathfinder::Pathfinder pathfinder(reinterpret_cast<pathfinder::navmesh::AStarNavmeshInterface&>(*navmesh_.get()));
     pathfinder.setCharacterRadius(agentRadius_);
     pathfindingResult_ = pathfinder.findShortestPath(*startPoint_, *goalPoint_);
     navmeshDisplay_->setPath(pathfindingResult_);

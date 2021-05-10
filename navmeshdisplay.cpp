@@ -76,16 +76,16 @@ NavmeshRenderArea* NavmeshDisplay::getNavmeshRenderArea() {
   return navmeshRenderArea_;
 }
 
-void NavmeshDisplay::setNavmesh(const triangle::triangleio &triangleData) {
-  navmeshRenderArea_->setNavmesh(triangleData);
-  vertexCountLabel_->setText(vertexCountLabelContents(triangleData.numberofpoints));
-  triangleCountLabel_->setText(triangleCountLabelContents(triangleData.numberoftriangles));
-  totalEdgeCountLabel_->setText(totalEdgeCountLabelContents(triangleData.numberofedges));
+void NavmeshDisplay::setNavmesh(const pathfinder::navmesh::NavmeshInterface &navmesh) {
+  navmeshRenderArea_->setNavmesh(navmesh);
+  vertexCountLabel_->setText(vertexCountLabelContents(navmesh.getVertexCount()));
+  triangleCountLabel_->setText(triangleCountLabelContents(navmesh.getTriangleCount()));
+  totalEdgeCountLabel_->setText(totalEdgeCountLabelContents(navmesh.getEdgeCount()));
 
   // Count the number of contrained edges
   int constrainedEdgeCount{0};
-  for (int i=0; i<triangleData.numberofedges; ++i) {
-    const int marker = triangleData.edgemarkerlist[i];
+  for (int edgeIndex=0; edgeIndex<navmesh.getEdgeCount(); ++edgeIndex) {
+    const int marker = navmesh.getEdgeMarker(edgeIndex);
     if (marker != 0) {
       // Boundary or constrained edge
       // (1 is boundary)

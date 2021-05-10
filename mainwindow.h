@@ -12,7 +12,7 @@
 #include <QSlider>
 #include <QString>
 
-
+#include <memory>
 #include <optional>
 
 class MainWindow : public QMainWindow {
@@ -57,17 +57,14 @@ private:
   void setAgentRadiusSlider();
 
   // Navmesh data
-  triangle::triangleio savedTriangleData_;
-  triangle::triangleio savedTriangleVoronoiData_;
+  std::unique_ptr<pathfinder::navmesh::NavmeshInterface> navmesh_;
   pathfinder::BehaviorBuilder behaviorBuilder_;
   // Navmesh functions
-  void initializeInputTriangleData();
-  void initializeNavmeshTriangleData();
   void openNavmeshFile(const QString &filename);
   void buildNavmeshFromFile(QString fileName);
 
   // Path data
-  double agentRadius_{5.0};
+  double agentRadius_{10.0};
   bool movePathStartEnabled_{false};
   bool movePathGoalEnabled_{false};
   std::optional<pathfinder::Vector> startPoint_;

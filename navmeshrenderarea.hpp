@@ -2,8 +2,8 @@
 #define NAVMESHRENDERAREA_HPP
 
 #include "Pathfinder/behaviorBuilder.h"
+#include "Pathfinder/navmesh_interface.h"
 #include "Pathfinder/pathfinder.h"
-#include "Pathfinder/triangle/triangle_api.h"
 #include "Pathfinder/vector.h"
 
 #include <QPainter>
@@ -24,7 +24,7 @@ public:
   void zoomOut(double zoomDiff);
 
   void setAgentRadius(double agentRadius);
-  void setNavmesh(const triangle::triangleio &triangleData);
+  void setNavmesh(const pathfinder::navmesh::NavmeshInterface &navmesh);
   void setPathStartPoint(const pathfinder::Vector &point);
   void setPathGoalPoint(const pathfinder::Vector &point);
   void setPath(const pathfinder::PathfindingResult &pathfindingResult);
@@ -58,7 +58,7 @@ private:
   bool displayVertexLabels_{false};
 
   // Navmesh data
-  const triangle::triangleio *triangleData_{nullptr};
+  const pathfinder::navmesh::NavmeshInterface *navmesh_{nullptr};
 
   // Pathfinding data
   double agentRadius_{0.0};
