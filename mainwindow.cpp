@@ -257,6 +257,7 @@ void MainWindow::openNavmeshFile(const QString &filename) {
     navmeshDisplay_->resetPathStart();
     navmeshDisplay_->resetPathGoal();
     navmeshDisplay_->resetPath();
+
   } catch (std::exception &ex) {
     // Could not open the file
     QMessageBox msgBox;

@@ -144,7 +144,7 @@ QSize NavmeshRenderArea::currentSize() const {
 void NavmeshRenderArea::drawVertices(QPainter &painter) {
   if (navmesh_ != nullptr) {
     // Make sure we have a navmesh
-    const float kPointRadius = 1.5 / getScale();
+    const double kPointRadius = 1.5 / getScale();
     for (int vertexIndex=0; vertexIndex<navmesh_->getVertexCount(); ++vertexIndex) {
       const auto &vertex = navmesh_->getVertex(vertexIndex);
       const auto transformedVertex = transformNavmeshCoordinateToWidgetCoordinate(vertex);
@@ -190,7 +190,7 @@ void NavmeshRenderArea::drawEdges(QPainter &painter) {
 void NavmeshRenderArea::drawShortestPath(QPainter &painter) {
   if (pathfindingResult_ != nullptr) {
     // Make sure we have a path to draw
-    const float kPathThickness = 1.5 / getScale();
+    const double kPathThickness = 1.5 / getScale();
     const QColor kPathColor(0, 150, 0);
     painter.save();
     QPen pen(kPathColor);
@@ -212,8 +212,6 @@ void NavmeshRenderArea::drawShortestPath(QPainter &painter) {
       } else if (arcSegment != nullptr) {
         const auto &centerOfCircle = arcSegment->circleCenter;
         const auto transformedCenter = transformNavmeshCoordinateToWidgetCoordinate(centerOfCircle);
-        // double scaledRectWidth = arcSegment->circleRadius/1920.0 * kAreaWidth_;
-        // double scaledRectHeight = arcSegment->circleRadius/1920.0 * kAreaHeight_;
         QRectF arcRectangle(transformedCenter.x() - arcSegment->circleRadius, transformedCenter.y() - arcSegment->circleRadius, arcSegment->circleRadius*2, arcSegment->circleRadius*2);
         int startAngle = 360*16 * arcSegment->startAngle / pathfinder::math::k2Pi;
         int spanAngle = 360*16 * pathfinder::math::arcAngle(arcSegment->startAngle, arcSegment->endAngle, arcSegment->angleDirection) / pathfinder::math::k2Pi;
@@ -225,7 +223,7 @@ void NavmeshRenderArea::drawShortestPath(QPainter &painter) {
 }
 
 void NavmeshRenderArea::drawPathfindingStartAndGoal(QPainter &painter) {
-  const float kPointRadius = 4 / getScale();
+  const double kPointRadius = 4 / getScale();
   painter.save();
 
   if (startPoint_) {
