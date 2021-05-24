@@ -23,6 +23,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
   createConnectionsToNavmeshDisplay();
 
+  // Check some boxes
+  nonConstraintEdgesCheckBox_->setChecked(true);
+
   setWindowTitle(tr("Pathfinder Visualization"));
 
   // Window is built, now lets try to open and display the sample navmesh file
@@ -163,7 +166,7 @@ void MainWindow::createConfigDock() {
   QDockWidget *dockWidget = new QDockWidget(tr("Settings"), this);
   dockWidget->setAllowedAreas(Qt::BottomDockWidgetArea | Qt::RightDockWidgetArea);
   dockWidget->setWidget(tabWidget);
-  addDockWidget(Qt::BottomDockWidgetArea, dockWidget);
+  addDockWidget(Qt::RightDockWidgetArea, dockWidget);
 }
 
 void MainWindow::createConnectionsToNavmeshDisplay() {
@@ -257,7 +260,6 @@ void MainWindow::openNavmeshFile(const QString &filename) {
     navmeshDisplay_->resetPathStart();
     navmeshDisplay_->resetPathGoal();
     navmeshDisplay_->resetPath();
-
   } catch (std::exception &ex) {
     // Could not open the file
     QMessageBox msgBox;
