@@ -45,7 +45,7 @@ void ZoomableScrollArea::wheelEvent(QWheelEvent *event) {
       // User is scrolling with the CTRL button held, zoom in/out while maintaining the position under the cursor
 
       // Calculate position of cursor on the widget
-      auto mousePosWithinWidget = widget()->mapFromParent(event->pos());
+      auto mousePosWithinWidget = widget()->mapFromParent(event->position());
 
       // Calculate size-independent position of cursor on the widget
       double xPercent = mousePosWithinWidget.x() / static_cast<double>(widget()->width());
@@ -61,7 +61,7 @@ void ZoomableScrollArea::wheelEvent(QWheelEvent *event) {
 
       // Scroll to maintain the cursor position
       // Calculate the new position of the cursor on the widget
-      auto newMousePosWithinWidget = widget()->mapFromParent(event->pos());
+      auto newMousePosWithinWidget = widget()->mapFromParent(event->position());
       // Calculate the desired position of the cursor on the widget
       double desiredXPos = xPercent * widget()->width();
       double desiredYPos = yPercent * widget()->height();

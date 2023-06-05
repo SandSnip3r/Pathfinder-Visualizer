@@ -77,3 +77,6 @@ CMakeLists.txt.user
 
 # Build directory
 build/
+
+# Qt files
+CMakeLists.txt.user.*
