@@ -332,8 +332,7 @@ void MainWindow::rebuildPath() {
     return;
   }
   try {
-    pathfinder::Pathfinder pathfinder(reinterpret_cast<pathfinder::navmesh::AStarNavmeshInterface&>(*navmesh_.get()));
-    pathfinder.setCharacterRadius(agentRadius_);
+    pathfinder::Pathfinder pathfinder(reinterpret_cast<pathfinder::navmesh::AStarNavmeshInterface&>(*navmesh_.get()), agentRadius_);
     pathfindingResult_ = pathfinder.findShortestPath(*startPoint_, *goalPoint_);
     navmeshDisplay_->setPath(pathfindingResult_);
   } catch (std::exception &ex) {
