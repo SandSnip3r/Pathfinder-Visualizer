@@ -4,8 +4,6 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
-#include <iostream>
-
 NavmeshDisplay::NavmeshDisplay(QWidget *parent) : QWidget(parent) {
   // Create grid
   // Add Render area at top of grid
@@ -76,16 +74,17 @@ NavmeshRenderArea* NavmeshDisplay::getNavmeshRenderArea() {
   return navmeshRenderArea_;
 }
 
-void NavmeshDisplay::setNavmesh(const pathfinder::navmesh::NavmeshInterface &navmesh) {
-  navmeshRenderArea_->setNavmesh(navmesh);
-  vertexCountLabel_->setText(vertexCountLabelContents(navmesh.getVertexCount()));
-  triangleCountLabel_->setText(triangleCountLabelContents(navmesh.getTriangleCount()));
-  totalEdgeCountLabel_->setText(totalEdgeCountLabelContents(navmesh.getEdgeCount()));
+void NavmeshDisplay::setNavmeshTriangulation(const NavmeshRenderArea::NavmeshTriangulationType &navmeshTriangulation) {
+  navmeshRenderArea_->setNavmeshTriangulation(navmeshTriangulation);
+
+  vertexCountLabel_->setText(vertexCountLabelContents(navmeshTriangulation.getVertexCount()));
+  triangleCountLabel_->setText(triangleCountLabelContents(navmeshTriangulation.getTriangleCount()));
+  totalEdgeCountLabel_->setText(totalEdgeCountLabelContents(navmeshTriangulation.getEdgeCount()));
 
   // Count the number of contrained edges
   int constrainedEdgeCount{0};
-  for (int edgeIndex=0; edgeIndex<navmesh.getEdgeCount(); ++edgeIndex) {
-    const int marker = navmesh.getEdgeMarker(edgeIndex);
+  for (int edgeIndex=0; edgeIndex<navmeshTriangulation.getEdgeCount(); ++edgeIndex) {
+    const int marker = navmeshTriangulation.getEdgeMarker(edgeIndex);
     if (marker != 0) {
       // Boundary or constrained edge
       // (1 is boundary)
@@ -109,7 +108,7 @@ void NavmeshDisplay::setMousePosition(const pathfinder::Vector &pos) {
   mousePositionLabel_->setText(mousePositionLabelContents(pos));
 }
 
-void NavmeshDisplay::setPath(const pathfinder::PathfindingResult &pathfindingResult) {
+void NavmeshDisplay::setPath(const PathfindingResult &pathfindingResult) {
   navmeshRenderArea_->setPath(pathfindingResult);
   pathLengthLabel_->setText(pathLengthLabelContents(calculatePathLength(pathfindingResult.shortestPath)));
 }

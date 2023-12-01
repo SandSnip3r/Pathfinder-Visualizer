@@ -4,8 +4,20 @@
 #include <QPolygonF>
 #include <QtMath>
 
+#include <algorithm>
+#include <array>
 #include <chrono>
+#include <functional>
 #include <iostream>
+#include <random>
+
+std::mt19937 createRandomEngine() {
+  std::random_device rd;
+  std::array<int, std::mt19937::state_size> seed_data;
+  std::generate_n(seed_data.data(), seed_data.size(), std::ref(rd));
+  std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
+  return std::mt19937(seq);
+}
 
 NavmeshRenderArea::NavmeshRenderArea(QWidget *parent) : QWidget(parent) {
   setMouseTracking(true);
@@ -17,10 +29,10 @@ QSize NavmeshRenderArea::minimumSizeHint() const {
   return currentSize();
 }
 
-void NavmeshRenderArea::setNavmesh(const pathfinder::navmesh::NavmeshInterface &navmesh) {
-  navmesh_ = &navmesh;
-  resetZoom();
+void NavmeshRenderArea::setNavmeshTriangulation(const NavmeshTriangulationType &navmeshTriangulation) {
+  navmeshTriangulation_ = &navmeshTriangulation;
   setSizeBasedOnNavmesh();
+  resetZoom();
   update();
 }
 
@@ -39,7 +51,7 @@ void NavmeshRenderArea::setAgentRadius(double agentRadius) {
   update();
 }
 
-void NavmeshRenderArea::setPath(const pathfinder::PathfindingResult &pathfindingResult) {
+void NavmeshRenderArea::setPath(const PathfindingResult &pathfindingResult) {
   pathfindingResult_ = &pathfindingResult;
   update();
 }
@@ -59,6 +71,10 @@ void NavmeshRenderArea::resetPath() {
 
 void NavmeshRenderArea::setHandleMouseDrag(bool enabled) {
   handleMouseDrag_ = enabled;
+}
+
+void NavmeshRenderArea::setHandleMouseClick(bool enabled) {
+  handleMouseClick_ = enabled;
 }
 
 void NavmeshRenderArea::mouseMoveEvent(QMouseEvent *event) {
@@ -100,19 +116,49 @@ void NavmeshRenderArea::mouseMoveEvent(QMouseEvent *event) {
   }
 }
 
+void NavmeshRenderArea::mousePressEvent(QMouseEvent *event) {
+  bool handled = false;
+  if (handleMouseClick_ && (event->buttons() & Qt::LeftButton)) {
+    const auto mouseLocalPos = event->localPos();
+    std::optional<pathfinder::Vector> navmeshPoint;
+    if (mouseLocalPos.x() >= 0 && mouseLocalPos.x() < width() &&
+        mouseLocalPos.y() >= 0 && mouseLocalPos.y() < height()) {
+      // Mouse is within the widget
+      const auto tmpPoint = transformWidgetCoordinateToNavmeshCoordinate(pathfinder::Vector{mouseLocalPos.x(), mouseLocalPos.y()});
+      if (tmpPoint.x() >= navmeshMinX_ && tmpPoint.x() <= navmeshMinX_+navmeshWidth_ &&
+          tmpPoint.y() >= navmeshMinY_ && tmpPoint.y() <= navmeshMinY_+navmeshHeight_) {
+        // Mouse is on the navmesh
+        navmeshPoint = tmpPoint;
+      }
+    }
+
+    if (navmeshPoint) {
+      // Mouse is on the navmesh
+      emit mouseClickedOnNavmesh(*navmeshPoint);
+      handled = true;
+    }
+  }
+
+  if (handled) {
+    event->accept();
+  } else {
+    QWidget::mousePressEvent(event);
+  }
+}
+
 QSize NavmeshRenderArea::sizeHint() const {
   return currentSize();
 }
 
 void NavmeshRenderArea::setSizeBasedOnNavmesh() {
-  if (navmesh_ != nullptr) {
+  if (navmeshTriangulation_ != nullptr) {
     // Update size of render area to reflect newly parsed navmesh
     navmeshMinX_ = std::numeric_limits<double>::max();
     navmeshMinY_ = std::numeric_limits<double>::max();
     double navmeshMaxX = std::numeric_limits<double>::lowest();
     double navmeshMaxY = std::numeric_limits<double>::lowest();
-    for (int vertexIndex=0; vertexIndex<navmesh_->getVertexCount(); ++vertexIndex) {
-      const auto &vertex = navmesh_->getVertex(vertexIndex);
+    for (int vertexIndex=0; vertexIndex<navmeshTriangulation_->getVertexCount(); ++vertexIndex) {
+      const auto &vertex = navmeshTriangulation_->getVertex(vertexIndex);
       if (vertex.x() < navmeshMinX_) {
         navmeshMinX_ = vertex.x();
       }
@@ -128,8 +174,11 @@ void NavmeshRenderArea::setSizeBasedOnNavmesh() {
     }
     navmeshWidth_ = navmeshMaxX - navmeshMinX_;
     navmeshHeight_ = navmeshMaxY - navmeshMinY_;
-    widgetBaseWidth_ = navmeshWidth_ + 2*kMargin_;
-    widgetBaseHeight_ = navmeshHeight_ + 2*kMargin_;
+    // Set the margin based on the size of the navmesh.
+    // TODO: Test with tiny navmesh (~1x1)
+    navmeshRenderAreaMargin_ = 0.01 * std::max(navmeshWidth_, navmeshHeight_);
+    widgetBaseWidth_ = navmeshWidth_ + 2*navmeshRenderAreaMargin_;
+    widgetBaseHeight_ = navmeshHeight_ + 2*navmeshRenderAreaMargin_;
     setMinimumSize(widgetBaseWidth_, widgetBaseHeight_);
     resize(widgetBaseWidth_, widgetBaseHeight_);
     updateGeometry();
@@ -142,49 +191,45 @@ QSize NavmeshRenderArea::currentSize() const {
 }
 
 void NavmeshRenderArea::drawVertices(QPainter &painter) {
-  if (navmesh_ != nullptr) {
-    // Make sure we have a navmesh
-    const double kPointRadius = 1.5 / getScale();
-    for (int vertexIndex=0; vertexIndex<navmesh_->getVertexCount(); ++vertexIndex) {
-      const auto &vertex = navmesh_->getVertex(vertexIndex);
-      const auto transformedVertex = transformNavmeshCoordinateToWidgetCoordinate(vertex);
-      painter.drawEllipse(QPointF{transformedVertex.x(), transformedVertex.y()}, kPointRadius, kPointRadius);
-    }
+  const double kPointRadius = 1.5 / getScale();
+  for (int vertexIndex=0; vertexIndex<navmeshTriangulation_->getVertexCount(); ++vertexIndex) {
+    const auto &vertex = navmeshTriangulation_->getVertex(vertexIndex);
+    const auto transformedVertex = transformNavmeshCoordinateToWidgetCoordinate(vertex);
+    painter.drawEllipse(QPointF{transformedVertex.x(), transformedVertex.y()}, kPointRadius, kPointRadius);
   }
 }
 
-void NavmeshRenderArea::drawEdges(QPainter &painter) {
-  if (navmesh_ != nullptr) {
-    // Make sure we have a navmesh
-    painter.save();
-    QPen pen;
-    pen.setWidth(0);
-    for (int edgeIndex=0; edgeIndex<navmesh_->getEdgeCount(); ++edgeIndex) {
-      const int marker = navmesh_->getEdgeMarker(edgeIndex);
-      if (!displayNonConstraintEdges_ && marker <= 1) {
-        // Do not display non-input edges
-        continue;
-      }
-      const auto &[vertexA, vertexB] = navmesh_->getEdge(edgeIndex);
-      const pathfinder::Vector transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(vertexA);
-      const pathfinder::Vector transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(vertexB);
-      if (marker == 1) {
-        // Boundary
-        pen.setColor(QColor{100,100,100});
-        painter.setPen(pen);
-      } else if (marker == 0) {
-        // Non-constraint edge
-        pen.setColor(QColor{150,255,150});
-        painter.setPen(pen);
-      } else {
-        // Constraint edge
-        pen.setColor(Qt::GlobalColor::red);
-        painter.setPen(pen);
-      }
-      painter.drawLine(QPointF(transformedVertexA.x(), transformedVertexA.y()), QPointF(transformedVertexB.x(), transformedVertexB.y()));
-    }
-    painter.restore();
+QColor NavmeshRenderArea::getColorForEdgeMarker(const int marker) {
+  if (marker == 0) {
+    // Non-constraint edge
+    return QColor{150,255,150};
   }
+  if (marker == 1) {
+    // Triangulation-inserted boundary
+    return QColor{100,100,100};
+  }
+  // User defined constraint
+  return QColor{255,0,0};
+}
+
+void NavmeshRenderArea::drawEdges(QPainter &painter) {
+  painter.save();
+  QPen pen;
+  pen.setWidth(0);
+  for (int edgeIndex=0; edgeIndex<navmeshTriangulation_->getEdgeCount(); ++edgeIndex) {
+    const int marker = navmeshTriangulation_->getEdgeMarker(edgeIndex);
+    if (!displayNonConstraintEdges_ && marker <= 1) {
+      // Do not display non-input edges
+      continue;
+    }
+    const auto &[vertexA, vertexB] = navmeshTriangulation_->getEdge(edgeIndex);
+    const pathfinder::Vector transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(vertexA);
+    const pathfinder::Vector transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(vertexB);
+    pen.setColor(getColorForEdgeMarker(marker));
+    painter.setPen(pen);
+    painter.drawLine(QPointF(transformedVertexA.x(), transformedVertexA.y()), QPointF(transformedVertexB.x(), transformedVertexB.y()));
+  }
+  painter.restore();
 }
 
 void NavmeshRenderArea::drawShortestPath(QPainter &painter) {
@@ -269,11 +314,11 @@ void NavmeshRenderArea::drawTrianglesCompletelySearched(QPainter &painter) {
   if (pathfindingResult_ != nullptr) {
     const QColor kTriangleColor(255, 255, 0, 33);
     painter.save();
-    std::vector<int> triangles;
-    std::copy_if(pathfindingResult_->aStarInfo.trianglesSearched.begin(), pathfindingResult_->aStarInfo.trianglesSearched.end(), std::back_inserter(triangles), [this](const int triangleNum){
+    std::vector<IndexType> triangles;
+    std::copy_if(pathfindingResult_->aStarInfo.trianglesSearched.begin(), pathfindingResult_->aStarInfo.trianglesSearched.end(), std::back_inserter(triangles), [this](const auto triangleIndex){
       // Return true if this isnt in the triangle corridor (and the corridor isnt being displayed)
       if (displayTriangleCorridor_) {
-        if (std::find(pathfindingResult_->aStarInfo.triangleCorridor.begin(), pathfindingResult_->aStarInfo.triangleCorridor.end(), triangleNum) != pathfindingResult_->aStarInfo.triangleCorridor.end()) {
+        if (std::find(pathfindingResult_->aStarInfo.triangleCorridor.begin(), pathfindingResult_->aStarInfo.triangleCorridor.end(), triangleIndex) != pathfindingResult_->aStarInfo.triangleCorridor.end()) {
           // This triangle is a part of the corridor
           return false;
         }
@@ -288,8 +333,8 @@ void NavmeshRenderArea::drawTrianglesVisited(QPainter &painter) {
   if (pathfindingResult_ != nullptr) {
     const QColor kTriangleColor(255, 127, 0, 33);
     painter.save();
-    std::vector<int> triangles;
-    std::copy_if(pathfindingResult_->aStarInfo.trianglesDiscovered.begin(), pathfindingResult_->aStarInfo.trianglesDiscovered.end(), std::back_inserter(triangles), [this](const int triangleNum){
+    std::vector<IndexType> triangles;
+    std::copy_if(pathfindingResult_->aStarInfo.trianglesDiscovered.begin(), pathfindingResult_->aStarInfo.trianglesDiscovered.end(), std::back_inserter(triangles), [this](const auto triangleNum){
       // Return true if this isnt in the triangle corridor (and the corridor isnt being displayed)
       if (displayTriangleCorridor_) {
         if (std::find(pathfindingResult_->aStarInfo.triangleCorridor.begin(), pathfindingResult_->aStarInfo.triangleCorridor.end(), triangleNum) != pathfindingResult_->aStarInfo.triangleCorridor.end()) {
@@ -310,80 +355,69 @@ void NavmeshRenderArea::drawTrianglesVisited(QPainter &painter) {
   }
 }
 
-void NavmeshRenderArea::drawTriangles(QPainter &painter, const std::vector<int> &triangles, const QColor &color) {
-  if (navmesh_ != nullptr) {
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(QBrush(color));
-    for (int triangleIndex : triangles) {
-      const auto &[vertexA, vertexB, vertexC] = navmesh_->getTriangleVertices(triangleIndex);
-      const auto transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(vertexA);
-      const auto transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(vertexB);
-      const auto transformedVertexC = transformNavmeshCoordinateToWidgetCoordinate(vertexC);
-      QPolygonF triangle;
-      triangle << QPointF{transformedVertexA.x(),transformedVertexA.y()} << QPointF{transformedVertexB.x(),transformedVertexB.y()} << QPointF{transformedVertexC.x(),transformedVertexC.y()};
-      painter.drawPolygon(triangle);
-    }
+void NavmeshRenderArea::drawTriangles(QPainter &painter, const std::vector<IndexType> &triangles, const QColor &color) {
+  painter.setPen(Qt::NoPen);
+  painter.setBrush(QBrush(color));
+  for (const auto triangleIndex : triangles) {
+    const auto &[vertexA, vertexB, vertexC] = navmeshTriangulation_->getTriangleVertices(triangleIndex);
+    const auto transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(vertexA);
+    const auto transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(vertexB);
+    const auto transformedVertexC = transformNavmeshCoordinateToWidgetCoordinate(vertexC);
+    QPolygonF triangle;
+    triangle << QPointF{transformedVertexA.x(),transformedVertexA.y()} << QPointF{transformedVertexB.x(),transformedVertexB.y()} << QPointF{transformedVertexC.x(),transformedVertexC.y()};
+    painter.drawPolygon(triangle);
   }
 }
 
 void NavmeshRenderArea::drawVertexLabels(QPainter &painter) {
-  if (navmesh_ != nullptr) {
-    // Make sure we have a navmesh
-    painter.save();
+  painter.save();
 
-    QFont f;
-    f.setPointSizeF(std::clamp(10/getScale(), 1.0, 10.0));
-    painter.setFont(f);
-    painter.setPen(QPen(QColor(0,100,255)));
+  QFont f;
+  f.setPointSizeF(std::clamp(10/getScale(), 1.0, 10.0));
+  painter.setFont(f);
+  painter.setPen(QPen(QColor(0,100,255)));
 
-    for (int vertexIndex=0; vertexIndex<navmesh_->getVertexCount(); ++vertexIndex) {
-      const auto &vertex = navmesh_->getVertex(vertexIndex);
-      const auto transformedVertex = transformNavmeshCoordinateToWidgetCoordinate(vertex);
-      painter.drawText(QPointF{transformedVertex.x(), transformedVertex.y()}, QString::number(vertexIndex));
-    }
-    painter.restore();
+  for (int vertexIndex=0; vertexIndex<navmeshTriangulation_->getVertexCount(); ++vertexIndex) {
+    const auto &vertex = navmeshTriangulation_->getVertex(vertexIndex);
+    const auto transformedVertex = transformNavmeshCoordinateToWidgetCoordinate(vertex);
+    painter.drawText(QPointF{transformedVertex.x(), transformedVertex.y()}, QString::number(vertexIndex));
   }
+  painter.restore();
 }
 
 void NavmeshRenderArea::drawEdgeLabels(QPainter &painter) {
-  if (navmesh_ != nullptr) {
-    // Make sure we have a navmesh
-    painter.save();
+  painter.save();
 
-    QFont f;
-    f.setPointSizeF(std::clamp(10/getScale(), 1.0, 10.0));
-    painter.setFont(f);
-    painter.setPen(Qt::GlobalColor::red);
+  QFont f;
+  f.setPointSizeF(std::clamp(10/getScale(), 1.0, 10.0));
+  painter.setFont(f);
+  painter.setPen(Qt::GlobalColor::red);
 
-    for (int edgeIndex=0; edgeIndex<navmesh_->getEdgeCount(); ++edgeIndex) {
-      const auto &[vertexA, vertexB] = navmesh_->getEdge(edgeIndex);
-      const auto transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(vertexA);
-      const auto transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(vertexB);
-      QPointF centerOfEdge{(transformedVertexA.x()+transformedVertexB.x())/2, (transformedVertexA.y()+transformedVertexB.y())/2};
-      painter.drawText(centerOfEdge, QString::number(edgeIndex));
-    }
-
-    painter.restore();
+  for (int edgeIndex=0; edgeIndex<navmeshTriangulation_->getEdgeCount(); ++edgeIndex) {
+    const auto &[vertexA, vertexB] = navmeshTriangulation_->getEdge(edgeIndex);
+    const auto transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(vertexA);
+    const auto transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(vertexB);
+    QPointF centerOfEdge{(transformedVertexA.x()+transformedVertexB.x())/2, (transformedVertexA.y()+transformedVertexB.y())/2};
+    painter.drawText(centerOfEdge, QString::number(edgeIndex));
   }
+
+  painter.restore();
 }
 
 void NavmeshRenderArea::drawTriangleLabels(QPainter &painter) {
-  if (navmesh_ != nullptr) {
-    // Make sure we have a navmesh
-    painter.save();
+  painter.save();
 
-    QFont f;
-    f.setPointSizeF(std::clamp(10/getScale(), 1.0, 10.0));
-    painter.setFont(f);
+  QFont f;
+  f.setPointSizeF(std::clamp(10/getScale(), 1.0, 10.0));
+  painter.setFont(f);
 
-    for (int triangleIndex=0; triangleIndex<navmesh_->getTriangleCount(); ++triangleIndex) {
-      const auto &[vertexA, vertexB, vertexC] = navmesh_->getTriangleVertices(triangleIndex);
-      const pathfinder::Vector triangleCenter = transformNavmeshCoordinateToWidgetCoordinate(pathfinder::Vector{(vertexA.x()+vertexB.x()+vertexC.x())/3, (vertexA.y()+vertexB.y()+vertexC.y())/3});
-      painter.drawText(QPointF{triangleCenter.x(), triangleCenter.y()}, QString::number(triangleIndex));
-    }
-
-    painter.restore();
+  for (int triangleIndex=0; triangleIndex<navmeshTriangulation_->getTriangleCount(); ++triangleIndex) {
+    const auto &[vertexA, vertexB, vertexC] = navmeshTriangulation_->getTriangleVertices(triangleIndex);
+    const pathfinder::Vector triangleCenter = transformNavmeshCoordinateToWidgetCoordinate(pathfinder::Vector{(vertexA.x()+vertexB.x()+vertexC.x())/3, (vertexA.y()+vertexB.y()+vertexC.y())/3});
+    painter.drawText(QPointF{triangleCenter.x(), triangleCenter.y()}, QString::number(triangleIndex));
   }
+
+  painter.restore();
 }
 
 void NavmeshRenderArea::resetZoom() {
@@ -418,8 +452,8 @@ pathfinder::Vector NavmeshRenderArea::transformWidgetCoordinateToNavmeshCoordina
   // Bottomleft is origin in navmesh
   // Flip (for y axis only), scale based on zoom, translate for margins, and finally translate for navmesh offset
   double scale = getScale();
-  auto x = v.x() / scale - kMargin_ + navmeshMinX_;
-  auto y = (height() - v.y()) / scale - kMargin_ + navmeshMinY_;
+  auto x = v.x() / scale - navmeshRenderAreaMargin_ + navmeshMinX_;
+  auto y = (height() - v.y()) / scale - navmeshRenderAreaMargin_ + navmeshMinY_;
   return {x,y};
 }
 
@@ -443,38 +477,50 @@ void NavmeshRenderArea::paintEvent(QPaintEvent * /* event */) {
   painter.setRenderHint(QPainter::Antialiasing, true);
 
   // Shift the painter a bit for the margin
-  painter.translate(kMargin_, kMargin_);
+  painter.translate(navmeshRenderAreaMargin_, navmeshRenderAreaMargin_);
 
-  // Draw the navmesh data
-  drawVertices(painter);
-  drawEdges(painter);
+  if (navmeshTriangulation_ != nullptr) {
+    // First, draw the silkroad navmesh data so that it's on the bottom
+    // drawSilkroadNavmesh(painter);
 
-  if (displayTriangleCorridor_) {
-    drawTriangleCorridor(painter);
-  }
+    // Draw the navmesh data
+    if (displayVertices_) {
+      drawVertices(painter);
+    }
+    drawEdges(painter);
 
-  if (displayTrianglesCompletelySearched_) {
-    drawTrianglesCompletelySearched(painter);
-  }
+    if (displayTriangleCorridor_) {
+      drawTriangleCorridor(painter);
+    }
 
-  if (displayTrianglesVisited_) {
-    drawTrianglesVisited(painter);
-  }
+    if (displayTrianglesCompletelySearched_) {
+      drawTrianglesCompletelySearched(painter);
+    }
 
-  // Draw pathfinding data
-  drawShortestPath(painter);
-  drawPathfindingStartAndGoal(painter);
+    if (displayTrianglesVisited_) {
+      drawTrianglesVisited(painter);
+    }
 
-  // Draw labels last so they're on top
-  if (displayVertexLabels_) {
-    drawVertexLabels(painter);
+    // Draw pathfinding data
+    drawShortestPath(painter);
+    drawPathfindingStartAndGoal(painter);
+
+    // Draw labels last so they're on top
+    if (displayVertexLabels_) {
+      drawVertexLabels(painter);
+    }
+    if (displayEdgeLabels_) {
+      drawEdgeLabels(painter);
+    }
+    if (displayTriangleLabels_) {
+      drawTriangleLabels(painter);
+    }
   }
-  if (displayEdgeLabels_) {
-    drawEdgeLabels(painter);
-  }
-  if (displayTriangleLabels_) {
-    drawTriangleLabels(painter);
-  }
+}
+
+void NavmeshRenderArea::setDisplayVertices(bool shouldDisplay) {
+  displayVertices_ = shouldDisplay;
+  update();
 }
 
 void NavmeshRenderArea::setDisplayNonConstraintEdges(bool shouldDisplay) {

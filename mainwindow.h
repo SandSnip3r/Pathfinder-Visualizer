@@ -4,16 +4,20 @@
 #include "navmeshdisplay.h"
 #include "zoomablescrollarea.hpp"
 
+#include <Pathfinder/behaviorBuilder.h>
+
 #include <QAction>
 #include <QActionGroup>
 #include <QCheckBox>
 #include <QLineEdit>
 #include <QMainWindow>
+#include <QPushButton>
 #include <QSlider>
 #include <QString>
 
 #include <memory>
 #include <optional>
+#include <vector>
 
 class MainWindow : public QMainWindow {
   Q_OBJECT
@@ -21,6 +25,10 @@ public:
   MainWindow(QWidget *parent = nullptr);
   ~MainWindow();
 private:
+  using NavmeshTriangulationType = pathfinder::navmesh::TriangleLibNavmesh;
+  using PathfinderType = pathfinder::Pathfinder<NavmeshTriangulationType>;
+  using PathfindingResult = PathfinderType::PathfindingResult;
+
   const QString kSampleNavmeshFileName_{tr("./maze.poly")};
 
   // Toolbar UI elements
@@ -33,6 +41,7 @@ private:
   QLineEdit *agentRadiusLineEdit_;
   QSlider *agentRadiusSlider_;
 
+  QCheckBox *verticesCheckBox_;
   QCheckBox *nonConstraintEdgesCheckBox_;
   QCheckBox *triangleCorridorCheckBox_;
   QCheckBox *trianglesCompletelySearchedCheckBox_;
@@ -57,19 +66,19 @@ private:
   void setAgentRadiusSlider();
 
   // Navmesh data
-  std::unique_ptr<pathfinder::navmesh::NavmeshInterface> navmesh_;
   pathfinder::BehaviorBuilder behaviorBuilder_;
+  std::optional<pathfinder::navmesh::TriangleLibNavmesh> triangleLibNavmeshTriangulation_;
   // Navmesh functions
+  void resetPathData();
   void openNavmeshFile(const QString &filename);
   void buildNavmeshFromFile(QString fileName);
 
   // Path data
-  double agentRadius_{10.0};
+  double agentRadius_{7.5};
   bool movePathStartEnabled_{false};
   bool movePathGoalEnabled_{false};
-  std::optional<pathfinder::Vector> startPoint_;
-  std::optional<pathfinder::Vector> goalPoint_;
-  pathfinder::PathfindingResult pathfindingResult_;
+  std::optional<pathfinder::Vector> startPoint_, goalPoint_;
+  PathfindingResult pathfindingResult_;
 
   // Path functions
   void rebuildPath();
@@ -80,6 +89,7 @@ private slots:
   void openNavmeshFilePrompt();
   void draggingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint);
   void movingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint);
+  void mouseClickedOnNavmesh(const pathfinder::Vector &navmeshPoint);
   void setMovePathStartEnabled(bool enabled);
   void setMovePathGoalEnabled(bool enabled);
   void agentRadiusTextChanged(const QString &text);

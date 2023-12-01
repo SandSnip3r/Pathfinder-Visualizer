@@ -4,8 +4,6 @@
 #include "navmeshrenderarea.hpp"
 #include "zoomablescrollarea.hpp"
 
-#include "Pathfinder/navmesh_interface.h"
-
 #include <QLabel>
 #include <QWidget>
 
@@ -13,14 +11,16 @@
 
 class NavmeshDisplay : public QWidget {
   Q_OBJECT
+private:
+  using PathfindingResult = pathfinder::Pathfinder<NavmeshRenderArea::NavmeshTriangulationType>::PathfindingResult;
 public:
   explicit NavmeshDisplay(QWidget *parent = nullptr);
   NavmeshRenderArea* getNavmeshRenderArea();
-  void setNavmesh(const pathfinder::navmesh::NavmeshInterface &navmesh);
+  void setNavmeshTriangulation(const NavmeshRenderArea::NavmeshTriangulationType &navmeshTriangulation);
   void setPathStartPoint(const pathfinder::Vector &pos);
   void setPathGoalPoint(const pathfinder::Vector &pos);
   void setMousePosition(const pathfinder::Vector &pos);
-  void setPath(const pathfinder::PathfindingResult &pathfindingResult);
+  void setPath(const PathfindingResult &pathfindingResult);
   void resetPathStart();
   void resetPathGoal();
   void resetPath();

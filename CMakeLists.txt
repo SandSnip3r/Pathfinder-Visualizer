@@ -31,11 +31,15 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
 add_subdirectory(Pathfinder)
 
 set(PROJECT_SOURCES
-        main.cpp
-        mainwindow.cpp
-        navmeshrenderarea.cpp
-        zoomablescrollarea.cpp
-        navmeshdisplay.cpp
+  main.cpp
+  mainwindow.cpp
+  mainwindow.h
+  navmeshdisplay.cpp
+  navmeshdisplay.h
+  navmeshrenderarea.cpp
+  navmeshrenderarea.hpp
+  zoomablescrollarea.cpp
+  zoomablescrollarea.hpp
 )
 
 set(RESOURCE_FILES
@@ -63,5 +67,10 @@ endif()
 
 target_compile_features(PathfinderVisualization PUBLIC cxx_std_11)
 
-target_link_libraries(PathfinderVisualization PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
-target_link_libraries(PathfinderVisualization PRIVATE Pathfinder)
+# target_link_libraries(PathfinderVisualization PRIVATE )
+target_link_libraries(PathfinderVisualization
+  PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    Pathfinder
+)
+target_include_directories(${PROJECT_NAME} PRIVATE ../../Combined/Combined/src)
