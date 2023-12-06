@@ -57,7 +57,7 @@ def printAsPoly(polylines, output_file):
     connections = []
     # 0 0 1 3
     for polyline in polylines:
-      connections.append([[x, x, x+1, 3] for x in range(len(polyline)-1)])
+      connections.append([[x, x+1, 3] for x in range(len(polyline)-1)])
     connectionCount = 0
     index = 1
     while index < len(polylines):
@@ -65,13 +65,14 @@ def printAsPoly(polylines, output_file):
       for connection in connections[index]:
         connection[0] += connectionCount
         connection[1] += connectionCount
-        connection[2] += connectionCount
       index += 1
     
     print(f'{sum(len(connectionList) for connectionList in connections)} 1', file=f)
+    index = 0
     for connectionList in connections:
       for connection in connectionList:
-        print(f'{connection[0]} {connection[1]} {connection[2]} {connection[3]}', file=f)
+        print(f'{index} {connection[0]} {connection[1]} {connection[2]}', file=f)
+        index += 1
 
     print('0\n', file=f)
 
