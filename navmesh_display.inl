@@ -1,17 +1,12 @@
-#include "navmeshdisplay.h"
-
-#include <QGroupBox>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
-
-NavmeshDisplay::NavmeshDisplay(QWidget *parent) : QWidget(parent) {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::NavmeshDisplay(QWidget *parent) : NavmeshDisplayBase(parent) {
   // Create grid
   // Add Render area at top of grid
   // Add textual display area below grid
   QVBoxLayout *layout = new QVBoxLayout;
 
   // Create the render area for the navmesh
-  navmeshRenderArea_ = new NavmeshRenderArea;
+  navmeshRenderArea_ = new NavmeshRenderAreaType;
 
   // Create the zoomable area for the rendering
   navmeshRenderScrollArea_ = new ZoomableScrollArea;
@@ -28,7 +23,8 @@ NavmeshDisplay::NavmeshDisplay(QWidget *parent) : QWidget(parent) {
   setLayout(layout);
 }
 
-QWidget* NavmeshDisplay::createTextDisplayArea() {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+QWidget* NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::createTextDisplayArea() {
   // There will be two sections that are horizontally laid out
   QHBoxLayout *layout = new QHBoxLayout;
 
@@ -70,12 +66,15 @@ QWidget* NavmeshDisplay::createTextDisplayArea() {
   return widget;
 }
 
-NavmeshRenderArea* NavmeshDisplay::getNavmeshRenderArea() {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+NavmeshRenderAreaBase* NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::getNavmeshRenderArea() {
   return navmeshRenderArea_;
 }
 
-void NavmeshDisplay::setNavmeshTriangulation(const NavmeshRenderArea::NavmeshTriangulationType &navmeshTriangulation) {
-  navmeshRenderArea_->setNavmeshTriangulation(navmeshTriangulation);
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::setNavmeshTriangulation(const NavmeshTriangulationType &navmeshTriangulation) {
+  auto &specificNavmeshRenderArea = dynamic_cast<NavmeshRenderAreaType&>(*navmeshRenderArea_);
+  specificNavmeshRenderArea.setNavmeshTriangulation(navmeshTriangulation);
 
   vertexCountLabel_->setText(vertexCountLabelContents(navmeshTriangulation.getVertexCount()));
   triangleCountLabel_->setText(triangleCountLabelContents(navmeshTriangulation.getTriangleCount()));
@@ -94,47 +93,52 @@ void NavmeshDisplay::setNavmeshTriangulation(const NavmeshRenderArea::NavmeshTri
   constrainedEdgeCountLabel_->setText(constrainedEdgeCountLabelContents(constrainedEdgeCount));
 }
 
-void NavmeshDisplay::setPathStartPoint(const pathfinder::Vector &pos) {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::setPathStartPoint(const pathfinder::Vector &pos) {
   navmeshRenderArea_->setPathStartPoint(pos);
   pathStartPositionLabel_->setText(pathStartPointLabelContents(pos));
 }
 
-void NavmeshDisplay::setPathGoalPoint(const pathfinder::Vector &pos) {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::setPathGoalPoint(const pathfinder::Vector &pos) {
   navmeshRenderArea_->setPathGoalPoint(pos);
   pathGoalPositionLabel_->setText(pathGoalPointLabelContents(pos));
 }
 
-void NavmeshDisplay::setMousePosition(const pathfinder::Vector &pos) {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::setMousePosition(const pathfinder::Vector &pos) {
   mousePositionLabel_->setText(mousePositionLabelContents(pos));
 }
 
-void NavmeshDisplay::setPath(const PathfindingResult &pathfindingResult) {
-  navmeshRenderArea_->setPath(pathfindingResult);
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::setPath(const PathfindingResult &pathfindingResult) {
+  auto &specificNavmeshRenderArea = dynamic_cast<NavmeshRenderAreaType&>(*navmeshRenderArea_);
+  specificNavmeshRenderArea.setPath(pathfindingResult);
   pathLengthLabel_->setText(pathLengthLabelContents(calculatePathLength(pathfindingResult.shortestPath)));
 }
 
-void NavmeshDisplay::resetPathStart() {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::resetPathStart() {
   navmeshRenderArea_->resetPathStart();
   pathStartPositionLabel_->setText(pathStartPointLabelContents());
 }
 
-void NavmeshDisplay::resetPathGoal() {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::resetPathGoal() {
   navmeshRenderArea_->resetPathGoal();
   pathGoalPositionLabel_->setText(pathGoalPointLabelContents());
 }
 
-void NavmeshDisplay::resetPath() {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::resetPath() {
   navmeshRenderArea_->resetPath();
   pathLengthLabel_->setText(pathLengthLabelContents());
 }
 
-void NavmeshDisplay::setDragModeEnabled(bool enabled) {
-  navmeshRenderScrollArea_->setDragModeEnabled(enabled);
-}
-
 // ===================================Label contents===================================
 
-QString NavmeshDisplay::pathStartPointLabelContents(const std::optional<pathfinder::Vector> &pos) const {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::pathStartPointLabelContents(const std::optional<pathfinder::Vector> &pos) const {
   if (pos) {
     return QString(tr("Path Start Point: %1,%2").arg(QString::number(pos->x(), 'f', 3), QString::number(pos->y(), 'f', 3)));
   } else {
@@ -142,7 +146,8 @@ QString NavmeshDisplay::pathStartPointLabelContents(const std::optional<pathfind
   }
 }
 
-QString NavmeshDisplay::pathGoalPointLabelContents(const std::optional<pathfinder::Vector> &pos) const {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::pathGoalPointLabelContents(const std::optional<pathfinder::Vector> &pos) const {
   if (pos) {
     return QString(tr("Path Goal Point: %1,%2").arg(QString::number(pos->x(), 'f', 3), QString::number(pos->y(), 'f', 3)));
   } else {
@@ -150,7 +155,8 @@ QString NavmeshDisplay::pathGoalPointLabelContents(const std::optional<pathfinde
   }
 }
 
-QString NavmeshDisplay::pathLengthLabelContents(const std::optional<double> &length) const {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::pathLengthLabelContents(const std::optional<double> &length) const {
   if (length) {
     return QString(tr("Path length: %1").arg(QString::number(*length, 'f', 5)));
   } else {
@@ -158,7 +164,8 @@ QString NavmeshDisplay::pathLengthLabelContents(const std::optional<double> &len
   }
 }
 
-QString NavmeshDisplay::vertexCountLabelContents(const std::optional<int> &count) const {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::vertexCountLabelContents(const std::optional<int> &count) const {
   if (count) {
     return QString(tr("Number of vertices: %1").arg(QString::number(*count)));
   } else {
@@ -166,7 +173,8 @@ QString NavmeshDisplay::vertexCountLabelContents(const std::optional<int> &count
   }
 }
 
-QString NavmeshDisplay::triangleCountLabelContents(const std::optional<int> &count) const {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::triangleCountLabelContents(const std::optional<int> &count) const {
   if (count) {
     return QString(tr("Number of triangles: %1").arg(QString::number(*count)));
   } else {
@@ -174,7 +182,8 @@ QString NavmeshDisplay::triangleCountLabelContents(const std::optional<int> &cou
   }
 }
 
-QString NavmeshDisplay::totalEdgeCountLabelContents(const std::optional<int> &count) const {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::totalEdgeCountLabelContents(const std::optional<int> &count) const {
   if (count) {
     return QString(tr("Number of edges: %1").arg(QString::number(*count)));
   } else {
@@ -182,7 +191,8 @@ QString NavmeshDisplay::totalEdgeCountLabelContents(const std::optional<int> &co
   }
 }
 
-QString NavmeshDisplay::constrainedEdgeCountLabelContents(const std::optional<int> &count) const {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::constrainedEdgeCountLabelContents(const std::optional<int> &count) const {
   if (count) {
     return QString(tr("Number of constrained edges: %1").arg(QString::number(*count)));
   } else {
@@ -190,7 +200,8 @@ QString NavmeshDisplay::constrainedEdgeCountLabelContents(const std::optional<in
   }
 }
 
-QString NavmeshDisplay::mousePositionLabelContents(const std::optional<pathfinder::Vector> &pos) const {
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::mousePositionLabelContents(const std::optional<pathfinder::Vector> &pos) const {
   if (pos) {
     return QString(tr("Mouse Position: %1,%2").arg(QString::number(pos->x(), 'f', 3), QString::number(pos->y(), 'f', 3)));
   } else {

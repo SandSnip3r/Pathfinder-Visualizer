@@ -1,5 +1,5 @@
-#include "navmeshrenderarea.hpp"
-#include "zoomablescrollarea.hpp"
+#include "navmesh_render_area.hpp"
+#include "zoomable_scroll_area.hpp"
 
 #include <QScrollBar>
 
@@ -39,7 +39,7 @@ void ZoomableScrollArea::wheelEvent(QWheelEvent *event) {
   *   Within the NavmeshRenderArea, just render based on its overall size.
   */
   bool handled = false;
-  NavmeshRenderArea *renderArea = dynamic_cast<NavmeshRenderArea*>(widget());
+  NavmeshRenderAreaBase *renderArea = dynamic_cast<NavmeshRenderAreaBase*>(widget());
   if (renderArea != nullptr) {
     if (event->modifiers() & Qt::ControlModifier) {
       // User is scrolling with the CTRL button held, zoom in/out while maintaining the position under the cursor

@@ -1,5 +1,5 @@
-#ifndef ZOOMABLESCROLLAREA_HPP
-#define ZOOMABLESCROLLAREA_HPP
+#ifndef ZOOMABLE_SCROLL_AREA_HPP_
+#define ZOOMABLE_SCROLL_AREA_HPP_
 
 #include <QScrollArea>
 
@@ -18,4 +18,4 @@ private:
   std::optional<QPointF> lastMouseLocalPos_;
 };
 
-#endif // ZOOMABLESCROLLAREA_HPP
+#endif // ZOOMABLE_SCROLL_AREA_HPP_

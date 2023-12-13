@@ -32,14 +32,16 @@ add_subdirectory(Pathfinder)
 
 set(PROJECT_SOURCES
   main.cpp
-  mainwindow.cpp
-  mainwindow.h
-  navmeshdisplay.cpp
-  navmeshdisplay.h
-  navmeshrenderarea.cpp
-  navmeshrenderarea.hpp
-  zoomablescrollarea.cpp
-  zoomablescrollarea.hpp
+  main_window.cpp
+  main_window.hpp
+  navmesh_display.hpp
+  navmesh_display_base.cpp
+  navmesh_display_base.hpp
+  navmesh_render_area.hpp
+  navmesh_render_area_base.cpp
+  navmesh_render_area_base.hpp
+  zoomable_scroll_area.cpp
+  zoomable_scroll_area.hpp
 )
 
 set(RESOURCE_FILES

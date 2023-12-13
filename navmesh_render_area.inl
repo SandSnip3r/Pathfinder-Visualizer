@@ -1,83 +1,37 @@
-#include "navmeshrenderarea.hpp"
-
-#include <QPointF>
-#include <QPolygonF>
-#include <QtMath>
-
-#include <algorithm>
-#include <array>
-#include <chrono>
-#include <functional>
-#include <iostream>
-#include <random>
-
-std::mt19937 createRandomEngine() {
-  std::random_device rd;
-  std::array<int, std::mt19937::state_size> seed_data;
-  std::generate_n(seed_data.data(), seed_data.size(), std::ref(rd));
-  std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
-  return std::mt19937(seq);
-}
-
-NavmeshRenderArea::NavmeshRenderArea(QWidget *parent) : QWidget(parent) {
+template<typename NavmeshTriangulationType>
+NavmeshRenderArea<NavmeshTriangulationType>::NavmeshRenderArea(QWidget *parent) : NavmeshRenderAreaBase(parent) {
   setMouseTracking(true);
   setBackgroundRole(QPalette::Base);
   setAutoFillBackground(true);
 }
 
-QSize NavmeshRenderArea::minimumSizeHint() const {
+template<typename NavmeshTriangulationType>
+QSize NavmeshRenderArea<NavmeshTriangulationType>::minimumSizeHint() const {
   return currentSize();
 }
 
-void NavmeshRenderArea::setNavmeshTriangulation(const NavmeshTriangulationType &navmeshTriangulation) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::setNavmeshTriangulation(const NavmeshTriangulationType &navmeshTriangulation) {
   navmeshTriangulation_ = &navmeshTriangulation;
   setSizeBasedOnNavmesh();
   resetZoom();
   update();
 }
 
-void NavmeshRenderArea::setPathStartPoint(const pathfinder::Vector &point) {
-  startPoint_ = point;
-  update();
-}
-
-void NavmeshRenderArea::setPathGoalPoint(const pathfinder::Vector &point) {
-  goalPoint_ = point;
-  update();
-}
-
-void NavmeshRenderArea::setAgentRadius(double agentRadius) {
-  agentRadius_ = agentRadius;
-  update();
-}
-
-void NavmeshRenderArea::setPath(const PathfindingResult &pathfindingResult) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::setPath(const PathfindingResult &pathfindingResult) {
   pathfindingResult_ = &pathfindingResult;
   update();
 }
 
-void NavmeshRenderArea::resetPathStart() {
-  startPoint_.reset();
-}
-
-void NavmeshRenderArea::resetPathGoal() {
-  goalPoint_.reset();
-}
-
-void NavmeshRenderArea::resetPath() {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::resetPath() {
   pathfindingResult_ = nullptr;
   update();
 }
 
-void NavmeshRenderArea::setHandleMouseDrag(bool enabled) {
-  handleMouseDrag_ = enabled;
-}
-
-void NavmeshRenderArea::setHandleMouseClick(bool enabled) {
-  handleMouseClick_ = enabled;
-}
-
-void NavmeshRenderArea::mouseMoveEvent(QMouseEvent *event) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::mouseMoveEvent(QMouseEvent *event) {
   bool handled = false;
   const auto mouseLocalPos = event->localPos();
   std::optional<pathfinder::Vector> navmeshPoint;
@@ -116,7 +70,8 @@ void NavmeshRenderArea::mouseMoveEvent(QMouseEvent *event) {
   }
 }
 
-void NavmeshRenderArea::mousePressEvent(QMouseEvent *event) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::mousePressEvent(QMouseEvent *event) {
   bool handled = false;
   if (handleMouseClick_ && (event->buttons() & Qt::LeftButton)) {
     const auto mouseLocalPos = event->localPos();
@@ -134,7 +89,7 @@ void NavmeshRenderArea::mousePressEvent(QMouseEvent *event) {
 
     if (navmeshPoint) {
       // Mouse is on the navmesh
-      emit mouseClickedOnNavmesh(*navmeshPoint);
+      // emit mouseClickedOnNavmesh(*navmeshPoint);
       handled = true;
     }
   }
@@ -146,51 +101,50 @@ void NavmeshRenderArea::mousePressEvent(QMouseEvent *event) {
   }
 }
 
-QSize NavmeshRenderArea::sizeHint() const {
+template<typename NavmeshTriangulationType>
+QSize NavmeshRenderArea<NavmeshTriangulationType>::sizeHint() const {
   return currentSize();
 }
 
-void NavmeshRenderArea::setSizeBasedOnNavmesh() {
-  if (navmeshTriangulation_ != nullptr) {
-    // Update size of render area to reflect newly parsed navmesh
-    navmeshMinX_ = std::numeric_limits<double>::max();
-    navmeshMinY_ = std::numeric_limits<double>::max();
-    double navmeshMaxX = std::numeric_limits<double>::lowest();
-    double navmeshMaxY = std::numeric_limits<double>::lowest();
-    for (int vertexIndex=0; vertexIndex<navmeshTriangulation_->getVertexCount(); ++vertexIndex) {
-      const auto &vertex = navmeshTriangulation_->getVertex(vertexIndex);
-      if (vertex.x() < navmeshMinX_) {
-        navmeshMinX_ = vertex.x();
-      }
-      if (vertex.x() > navmeshMaxX) {
-        navmeshMaxX = vertex.x();
-      }
-      if (vertex.y() < navmeshMinY_) {
-        navmeshMinY_ = vertex.y();
-      }
-      if (vertex.y() > navmeshMaxY) {
-        navmeshMaxY = vertex.y();
-      }
-    }
-    navmeshWidth_ = navmeshMaxX - navmeshMinX_;
-    navmeshHeight_ = navmeshMaxY - navmeshMinY_;
-    // Set the margin based on the size of the navmesh.
-    // TODO: Test with tiny navmesh (~1x1)
-    navmeshRenderAreaMargin_ = 0.01 * std::max(navmeshWidth_, navmeshHeight_);
-    widgetBaseWidth_ = navmeshWidth_ + 2*navmeshRenderAreaMargin_;
-    widgetBaseHeight_ = navmeshHeight_ + 2*navmeshRenderAreaMargin_;
-    setMinimumSize(widgetBaseWidth_, widgetBaseHeight_);
-    resize(widgetBaseWidth_, widgetBaseHeight_);
-    updateGeometry();
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::setSizeBasedOnNavmesh() {
+  if (navmeshTriangulation_ == nullptr) {
+    throw std::runtime_error("Trying to set size without navmesh triangulation");
   }
+  // Update size of render area to reflect newly parsed navmesh
+  navmeshMinX_ = std::numeric_limits<double>::max();
+  navmeshMinY_ = std::numeric_limits<double>::max();
+  double navmeshMaxX = std::numeric_limits<double>::lowest();
+  double navmeshMaxY = std::numeric_limits<double>::lowest();
+  for (int vertexIndex=0; vertexIndex<navmeshTriangulation_->getVertexCount(); ++vertexIndex) {
+    const auto &vertex = navmeshTriangulation_->getVertex(vertexIndex);
+    if (vertex.x() < navmeshMinX_) {
+      navmeshMinX_ = vertex.x();
+    }
+    if (vertex.x() > navmeshMaxX) {
+      navmeshMaxX = vertex.x();
+    }
+    if (vertex.y() < navmeshMinY_) {
+      navmeshMinY_ = vertex.y();
+    }
+    if (vertex.y() > navmeshMaxY) {
+      navmeshMaxY = vertex.y();
+    }
+  }
+  navmeshWidth_ = navmeshMaxX - navmeshMinX_;
+  navmeshHeight_ = navmeshMaxY - navmeshMinY_;
+  // Set the margin based on the size of the navmesh.
+  // TODO: Test with tiny navmesh (~1x1)
+  navmeshRenderAreaMargin_ = 0.01 * std::max(navmeshWidth_, navmeshHeight_);
+  widgetBaseWidth_ = navmeshWidth_ + 2*navmeshRenderAreaMargin_;
+  widgetBaseHeight_ = navmeshHeight_ + 2*navmeshRenderAreaMargin_;
+  setMinimumSize(widgetBaseWidth_, widgetBaseHeight_);
+  resize(widgetBaseWidth_, widgetBaseHeight_);
+  updateGeometry();
 }
 
-QSize NavmeshRenderArea::currentSize() const {
-  double scale = getScale();
-  return QSize(widgetBaseWidth_*scale, widgetBaseHeight_*scale);
-}
-
-void NavmeshRenderArea::drawVertices(QPainter &painter) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::drawVertices(QPainter &painter) {
   const double kPointRadius = 1.5 / getScale();
   for (int vertexIndex=0; vertexIndex<navmeshTriangulation_->getVertexCount(); ++vertexIndex) {
     const auto &vertex = navmeshTriangulation_->getVertex(vertexIndex);
@@ -199,20 +153,8 @@ void NavmeshRenderArea::drawVertices(QPainter &painter) {
   }
 }
 
-QColor NavmeshRenderArea::getColorForEdgeMarker(const int marker) {
-  if (marker == 0) {
-    // Non-constraint edge
-    return QColor{150,255,150};
-  }
-  if (marker == 1) {
-    // Triangulation-inserted boundary
-    return QColor{100,100,100};
-  }
-  // User defined constraint
-  return QColor{255,0,0};
-}
-
-void NavmeshRenderArea::drawEdges(QPainter &painter) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::drawEdges(QPainter &painter) {
   painter.save();
   QPen pen;
   pen.setWidth(0);
@@ -232,7 +174,8 @@ void NavmeshRenderArea::drawEdges(QPainter &painter) {
   painter.restore();
 }
 
-void NavmeshRenderArea::drawShortestPath(QPainter &painter) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::drawShortestPath(QPainter &painter) {
   if (pathfindingResult_ != nullptr) {
     // Make sure we have a path to draw
     const double kPathThickness = 1.5 / getScale();
@@ -267,7 +210,8 @@ void NavmeshRenderArea::drawShortestPath(QPainter &painter) {
   }
 }
 
-void NavmeshRenderArea::drawPathfindingStartAndGoal(QPainter &painter) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::drawPathfindingStartAndGoal(QPainter &painter) {
   const double kPointRadius = 4 / getScale();
   painter.save();
 
@@ -302,7 +246,8 @@ void NavmeshRenderArea::drawPathfindingStartAndGoal(QPainter &painter) {
   painter.restore();
 }
 
-void NavmeshRenderArea::drawTriangleCorridor(QPainter &painter) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::drawTriangleCorridor(QPainter &painter) {
   if (pathfindingResult_ != nullptr) {
     const QColor kTriangleColor(0, 255, 0, 33);
     painter.save();
@@ -310,7 +255,9 @@ void NavmeshRenderArea::drawTriangleCorridor(QPainter &painter) {
     painter.restore();
   }
 }
-void NavmeshRenderArea::drawTrianglesCompletelySearched(QPainter &painter) {
+
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::drawTrianglesCompletelySearched(QPainter &painter) {
   if (pathfindingResult_ != nullptr) {
     const QColor kTriangleColor(255, 255, 0, 33);
     painter.save();
@@ -329,7 +276,9 @@ void NavmeshRenderArea::drawTrianglesCompletelySearched(QPainter &painter) {
     painter.restore();
   }
 }
-void NavmeshRenderArea::drawTrianglesVisited(QPainter &painter) {
+
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::drawTrianglesVisited(QPainter &painter) {
   if (pathfindingResult_ != nullptr) {
     const QColor kTriangleColor(255, 127, 0, 33);
     painter.save();
@@ -355,7 +304,8 @@ void NavmeshRenderArea::drawTrianglesVisited(QPainter &painter) {
   }
 }
 
-void NavmeshRenderArea::drawTriangles(QPainter &painter, const std::vector<IndexType> &triangles, const QColor &color) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::drawTriangles(QPainter &painter, const std::vector<IndexType> &triangles, const QColor &color) {
   painter.setPen(Qt::NoPen);
   painter.setBrush(QBrush(color));
   for (const auto triangleIndex : triangles) {
@@ -369,7 +319,8 @@ void NavmeshRenderArea::drawTriangles(QPainter &painter, const std::vector<Index
   }
 }
 
-void NavmeshRenderArea::drawVertexLabels(QPainter &painter) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::drawVertexLabels(QPainter &painter) {
   painter.save();
 
   QFont f;
@@ -385,7 +336,8 @@ void NavmeshRenderArea::drawVertexLabels(QPainter &painter) {
   painter.restore();
 }
 
-void NavmeshRenderArea::drawEdgeLabels(QPainter &painter) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::drawEdgeLabels(QPainter &painter) {
   painter.save();
 
   QFont f;
@@ -404,7 +356,8 @@ void NavmeshRenderArea::drawEdgeLabels(QPainter &painter) {
   painter.restore();
 }
 
-void NavmeshRenderArea::drawTriangleLabels(QPainter &painter) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::drawTriangleLabels(QPainter &painter) {
   painter.save();
 
   QFont f;
@@ -420,50 +373,8 @@ void NavmeshRenderArea::drawTriangleLabels(QPainter &painter) {
   painter.restore();
 }
 
-void NavmeshRenderArea::resetZoom() {
-  zoomLevel_ = 0;
-  resizeForNewZoom();
-}
-
-void NavmeshRenderArea::zoomIn(double zoomDiff) {
-  zoomLevel_ += zoomDiff;
-  resizeForNewZoom();
-}
-
-void NavmeshRenderArea::zoomOut(double zoomDiff) {
-  zoomLevel_ -= zoomDiff;
-  resizeForNewZoom();
-}
-
-void NavmeshRenderArea::resizeForNewZoom() {
-  const auto size = currentSize();
-  setMinimumSize(size);
-  resize(size);
-  updateGeometry();
-  update();
-}
-
-double NavmeshRenderArea::getScale() const {
-  return qPow(2.0, zoomLevel_);
-}
-
-pathfinder::Vector NavmeshRenderArea::transformWidgetCoordinateToNavmeshCoordinate(const pathfinder::Vector &v) const {
-  // Topleft is origin in Qt
-  // Bottomleft is origin in navmesh
-  // Flip (for y axis only), scale based on zoom, translate for margins, and finally translate for navmesh offset
-  double scale = getScale();
-  auto x = v.x() / scale - navmeshRenderAreaMargin_ + navmeshMinX_;
-  auto y = (height() - v.y()) / scale - navmeshRenderAreaMargin_ + navmeshMinY_;
-  return {x,y};
-}
-
-pathfinder::Vector NavmeshRenderArea::transformNavmeshCoordinateToWidgetCoordinate(const pathfinder::Vector &v) const {
-  // Scale and margin are already handled by translations to the painter
-  // Only need to account for different coordinate frame (flip y axis) and a translation for potential negative points in the navmesh
-  return pathfinder::Vector{v.x() - navmeshMinX_, navmeshHeight_-(v.y() - navmeshMinY_)};
-}
-
-void NavmeshRenderArea::paintEvent(QPaintEvent * /* event */) {
+template<typename NavmeshTriangulationType>
+void NavmeshRenderArea<NavmeshTriangulationType>::paintEvent(QPaintEvent * /* event */) {
   QPainter painter(this);
 
   // Scale the painter based on the zoom level of the canvas
@@ -479,10 +390,9 @@ void NavmeshRenderArea::paintEvent(QPaintEvent * /* event */) {
   // Shift the painter a bit for the margin
   painter.translate(navmeshRenderAreaMargin_, navmeshRenderAreaMargin_);
 
-  if (navmeshTriangulation_ != nullptr) {
-    // First, draw the silkroad navmesh data so that it's on the bottom
-    // drawSilkroadNavmesh(painter);
+  paintUnderNavmeshTriangulation(painter);
 
+  if (navmeshTriangulation_ != nullptr) {
     // Draw the navmesh data
     if (displayVertices_) {
       drawVertices(painter);
@@ -518,42 +428,20 @@ void NavmeshRenderArea::paintEvent(QPaintEvent * /* event */) {
   }
 }
 
-void NavmeshRenderArea::setDisplayVertices(bool shouldDisplay) {
-  displayVertices_ = shouldDisplay;
-  update();
+template<typename NavmeshTriangulationType>
+pathfinder::Vector NavmeshRenderArea<NavmeshTriangulationType>::transformWidgetCoordinateToNavmeshCoordinate(const pathfinder::Vector &v) const {
+  // Topleft is origin in Qt
+  // Bottomleft is origin in navmesh
+  // Flip (for y axis only), scale based on zoom, translate for margins, and finally translate for navmesh offset
+  double scale = getScale();
+  auto x = v.x() / scale - navmeshRenderAreaMargin_ + navmeshMinX_;
+  auto y = (height() - v.y()) / scale - navmeshRenderAreaMargin_ + navmeshMinY_;
+  return {x,y};
 }
 
-void NavmeshRenderArea::setDisplayNonConstraintEdges(bool shouldDisplay) {
-  displayNonConstraintEdges_ = shouldDisplay;
-  update();
-}
-
-void NavmeshRenderArea::setDisplayTriangleCorridor(bool shouldDisplay) {
-  displayTriangleCorridor_ = shouldDisplay;
-  update();
-}
-
-void NavmeshRenderArea::setDisplayTrianglesCompletelySearched(bool shouldDisplay) {
-  displayTrianglesCompletelySearched_ = shouldDisplay;
-  update();
-}
-
-void NavmeshRenderArea::setDisplayTrianglesVisited(bool shouldDisplay) {
-  displayTrianglesVisited_ = shouldDisplay;
-  update();
-}
-
-void NavmeshRenderArea::setDisplayTriangleLabels(bool shouldDisplay) {
-  displayTriangleLabels_ = shouldDisplay;
-  update();
-}
-
-void NavmeshRenderArea::setDisplayEdgeLabels(bool shouldDisplay) {
-  displayEdgeLabels_ = shouldDisplay;
-  update();
-}
-
-void NavmeshRenderArea::setDisplayVertexLabels(bool shouldDisplay) {
-  displayVertexLabels_ = shouldDisplay;
-  update();
+template<typename NavmeshTriangulationType>
+pathfinder::Vector NavmeshRenderArea<NavmeshTriangulationType>::transformNavmeshCoordinateToWidgetCoordinate(const pathfinder::Vector &v) const {
+  // Scale and margin are already handled by translations to the painter
+  // Only need to account for different coordinate frame (flip y axis) and a translation for potential negative points in the navmesh
+  return pathfinder::Vector{v.x() - navmeshMinX_, navmeshHeight_-(v.y() - navmeshMinY_)};
 }

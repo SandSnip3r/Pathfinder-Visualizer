@@ -1,5 +1,4 @@
-#include "mainwindow.h"
-#include "navmeshdisplay.h"
+#include "main_window.hpp"
 
 #include <Pathfinder/triangle_lib_navmesh.h>
 
@@ -19,18 +18,15 @@
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   createMenubar();
   createToolbar();
-  createNavmeshDisplay();
   createConfigDock();
-
-  createConnectionsToNavmeshDisplay();
 
   // Check some boxes
   nonConstraintEdgesCheckBox_->setChecked(true);
 
   setWindowTitle(tr("Pathfinder Visualization"));
 
-  // Window is built, now lets try to open and display the sample navmesh file
-  openNavmeshFile(kSampleNavmeshFileName_);
+  // Window is built. Start by opening an example TriangleLib .poly file.
+  openPolyFile(kSampleNavmeshFileName_);
 }
 
 MainWindow::~MainWindow() {
@@ -65,21 +61,11 @@ void MainWindow::createToolbar() {
   movePathGoalAction_->setCheckable(true);
   movePathGoalAction_->setIcon(QIcon(":/icons/goal.png"));
   toolbarActionGroup_->addAction(movePathGoalAction_);
-
-  connect(movePathStartAction_, &QAction::toggled, this, &MainWindow::setMovePathStartEnabled);
-  connect(movePathGoalAction_, &QAction::toggled, this, &MainWindow::setMovePathGoalEnabled);
-}
-
-void MainWindow::createNavmeshDisplay() {
-  navmeshDisplay_ = new NavmeshDisplay;
-  setCentralWidget(navmeshDisplay_);
-
-  navmeshDisplay_->getNavmeshRenderArea()->setAgentRadius(agentRadius_);
 }
 
 void MainWindow::createConfigDock() {
   // ====================================================================
-  // ========================Pathfinding settings========================
+  // ======================Pathfinding settings tab======================
   // ====================================================================
   QLabel *pathfindingCharacterRadiusLabel = new QLabel(tr("Character Radius: "));
   agentRadiusLineEdit_ = new QLineEdit;
@@ -104,7 +90,7 @@ void MainWindow::createConfigDock() {
   pathfindingOptionsTabContent->setLayout(pathfindingOptionsLayout);
 
   // ====================================================================
-  // =======================Visualization settings=======================
+  // =====================Visualization settings tab=====================
   // ====================================================================
   // Navmesh Triangulation
   verticesCheckBox_ = new QCheckBox(tr("Show Vertices"));
@@ -167,40 +153,62 @@ void MainWindow::createConfigDock() {
   // ====================================================================
 
   // Build the config UI
-  QTabWidget *tabWidget = new QTabWidget(this);
-  tabWidget->addTab(pathfindingOptionsTabContent, tr("Pathfinding"));
-  tabWidget->addTab(navmeshVisualizationOptionsTabContent, tr("Navmesh Visualization"));
+  configTabWidget_ = new QTabWidget(this);
+  configTabWidget_->addTab(pathfindingOptionsTabContent, tr("Pathfinding"));
+  configTabWidget_->addTab(navmeshVisualizationOptionsTabContent, tr("Navmesh Visualization"));
 
   // Now, build the dock for the config UI
   QDockWidget *dockWidget = new QDockWidget(tr("Settings"), this);
   dockWidget->setAllowedAreas(Qt::BottomDockWidgetArea | Qt::RightDockWidgetArea);
-  dockWidget->setWidget(tabWidget);
+  dockWidget->setWidget(configTabWidget_);
   addDockWidget(Qt::RightDockWidgetArea, dockWidget);
+}
+
+void MainWindow::populateConfigDock() {
+  // Get values for configuration from the render area.
+  if (navmeshDisplay_ == nullptr) {
+    throw std::runtime_error("No NavmeshDisplay");
+  }
+  verticesCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayVertices());
+  nonConstraintEdgesCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayNonConstraintEdges());
+  triangleCorridorCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayTriangleCorridor());
+  trianglesCompletelySearchedCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayTrianglesCompletelySearched());
+  trianglesVisitedCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayTrianglesVisited());
+  triangleLabelsCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayTriangleLabels());
+  edgeLabelsCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayEdgeLabels());
+  vertexLabelsCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayVertexLabels());
 }
 
 void MainWindow::createConnectionsToNavmeshDisplay() {
   // Toolbar
-  connect(dragAction_, &QAction::toggled, navmeshDisplay_, &NavmeshDisplay::setDragModeEnabled);
+  connect(dragAction_, &QAction::toggled, navmeshDisplay_, &NavmeshDisplayBase::setDragModeEnabled);
+  connect(movePathStartAction_, &QAction::toggled, this, &MainWindow::setMovePathStartEnabled);
+  connect(movePathGoalAction_, &QAction::toggled, this, &MainWindow::setMovePathGoalEnabled);
 
   // Configuration
-  connect(verticesCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::setDisplayVertices);
-  connect(nonConstraintEdgesCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::setDisplayNonConstraintEdges);
-  connect(triangleCorridorCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::setDisplayTriangleCorridor);
-  connect(trianglesCompletelySearchedCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::setDisplayTrianglesCompletelySearched);
-  connect(trianglesVisitedCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::setDisplayTrianglesVisited);
-  connect(triangleLabelsCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::setDisplayTriangleLabels);
-  connect(edgeLabelsCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::setDisplayEdgeLabels);
-  connect(vertexLabelsCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::setDisplayVertexLabels);
+  connect(verticesCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayVertices);
+  connect(nonConstraintEdgesCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayNonConstraintEdges);
+  connect(triangleCorridorCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayTriangleCorridor);
+  connect(trianglesCompletelySearchedCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayTrianglesCompletelySearched);
+  connect(trianglesVisitedCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayTrianglesVisited);
+  connect(triangleLabelsCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayTriangleLabels);
+  connect(edgeLabelsCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayEdgeLabels);
+  connect(vertexLabelsCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayVertexLabels);
 
   // Mouse event handling
-  connect(navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::draggingMouseOnNavmesh, this, &MainWindow::draggingMouseOnNavmesh);
-  connect(navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderArea::movingMouseOnNavmesh, this, &MainWindow::movingMouseOnNavmesh);
+  connect(navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::draggingMouseOnNavmesh, this, &MainWindow::draggingMouseOnNavmesh);
+  connect(navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::movingMouseOnNavmesh, this, &MainWindow::movingMouseOnNavmesh);
 }
 
 void MainWindow::openNavmeshFilePrompt() {
-  QString filename = QFileDialog::getOpenFileName(this,tr("Choose Planar Straight Line Graph file"),QString(),tr("Poly (*.poly)"));
+  QString filename = QFileDialog::getOpenFileName(this,tr("Choose Navmesh file"),QString(),tr("Poly (*.poly)"));
   if (!filename.isEmpty()) {
-    openNavmeshFile(filename);
+    const auto fileInfo = QFileInfo(filename);
+    if (fileInfo.suffix() == "poly") {
+      openPolyFile(filename);
+    } else {
+      throw std::runtime_error("Unsupported file format "+fileInfo.suffix().toStdString());
+    }
   }
 }
 
@@ -236,8 +244,8 @@ void MainWindow::movingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint) {
   navmeshDisplay_->setMousePosition(navmeshPoint);
 }
 
-void MainWindow::mouseClickedOnNavmesh(const pathfinder::Vector &navmeshPoint) {
-}
+// void MainWindow::mouseClickedOnNavmesh(const pathfinder::Vector &navmeshPoint) {
+// }
 
 void MainWindow::setMovePathStartEnabled(bool enabled) {
   movePathStartEnabled_ = enabled;
@@ -261,6 +269,22 @@ void MainWindow::setAgentRadiusSlider() {
 //================================================= Navmesh =================================================
 //===========================================================================================================
 
+void MainWindow::updateAgentRadius(double newRadius) {
+  // Update value
+  agentRadius_ = newRadius;
+  // Update LineEdit
+  if (!matchingAgentRadiusLineEditAndSlider_) {
+    // Someone manually changed this, update the other widget to match
+    matchingAgentRadiusLineEditAndSlider_ = true;
+    setAgentRadiusLineEdit();
+    matchingAgentRadiusLineEditAndSlider_ = false;
+  }
+  // Update navmesh
+  navmeshDisplay_->getNavmeshRenderArea()->setAgentRadius(agentRadius_);
+  // New path needs to be created
+  rebuildPath();
+}
+
 void MainWindow::resetPathData() {
   startPoint_.reset();
   goalPoint_.reset();
@@ -269,12 +293,19 @@ void MainWindow::resetPathData() {
   navmeshDisplay_->resetPath();
 }
 
-void MainWindow::openNavmeshFile(const QString &filename) {
+void MainWindow::openPolyFile(const QString &filename) {
   try {
-    // First, try to open the file and build the navmesh
-    buildNavmeshFromFile(filename);
+    // Try to open the file and build the navmesh triangulation.
+    buildTriangleLibNavmeshTriangulationFromFile(filename);
 
-    // File opened successfully, reset path data
+    // Build the navmesh display for this type of navmesh triangulation.
+    createNavmeshDisplay<NavmeshDisplay<TriangleLibNavmeshTriangulationType>>();
+
+    // Give the navmesh triangulation to the display.
+    auto &concreteNavmeshDisplay = dynamic_cast<NavmeshDisplay<TriangleLibNavmeshTriangulationType>&>(*navmeshDisplay_);
+    concreteNavmeshDisplay.setNavmeshTriangulation(std::get<TriangleLibNavmeshTriangulationType>(*navmeshTriangulation_));
+
+    // File opened successfully, navmesh display created and setup, reset path data
     resetPathData();
   } catch (std::exception &ex) {
     // Could not open the file
@@ -288,7 +319,7 @@ void MainWindow::openNavmeshFile(const QString &filename) {
   }
 }
 
-void MainWindow::buildNavmeshFromFile(QString fileName) {
+void MainWindow::buildTriangleLibNavmeshTriangulationFromFile(QString fileName) {
   triangle::triangleio inputData;
   triangle::triangle_initialize_triangleio(&inputData);
 
@@ -334,13 +365,11 @@ void MainWindow::buildNavmeshFromFile(QString fileName) {
   triangle_context_destroy(ctx);
 
   // Build navmesh from triangle data
-  triangleLibNavmeshTriangulation_ = pathfinder::navmesh::TriangleLibNavmesh(triangleData, triangleVoronoiData);
+  navmeshTriangulation_.emplace<TriangleLibNavmeshTriangulationType>(TriangleLibNavmeshTriangulationType(triangleData, triangleVoronoiData));
 
   // Free
   triangle_free_triangleio(&triangleData);
   triangle_free_triangleio(&triangleVoronoiData);
-
-  navmeshDisplay_->setNavmeshTriangulation(*triangleLibNavmeshTriangulation_);
 }
 
 void MainWindow::rebuildPath() {
@@ -348,13 +377,16 @@ void MainWindow::rebuildPath() {
     // Trying to build a path but we dont have our start and goal points; nothing to do
     return;
   }
-  if (!triangleLibNavmeshTriangulation_) {
-    throw std::runtime_error("Trying to build path when there is no navmesh");
+  if (!navmeshTriangulation_) {
+    throw std::runtime_error("Trying to build path when there is no navmesh triangulation");
   }
   try {
-    PathfinderType pathfinder(*triangleLibNavmeshTriangulation_, agentRadius_);
-    pathfindingResult_ = pathfinder.findShortestPath(*startPoint_, *goalPoint_);
-    navmeshDisplay_->setPath(pathfindingResult_);
+    if (std::holds_alternative<TriangleLibNavmeshTriangulationType>(*navmeshTriangulation_)) {
+      TriangleLibPathfinderType pathfinder(std::get<TriangleLibNavmeshTriangulationType>(*navmeshTriangulation_), agentRadius_);
+      pathfindingResult_ = pathfinder.findShortestPath(*startPoint_, *goalPoint_);
+      auto &concreteNavmeshDisplay = dynamic_cast<NavmeshDisplay<TriangleLibNavmeshTriangulationType>&>(*navmeshDisplay_);
+      concreteNavmeshDisplay.setPath(std::get<TriangleLibPathfindingResult>(*pathfindingResult_));
+    }
   } catch (std::exception &ex) {
     // Unable to build path
     std::cout << "Unable to build path. Exception: \"" << ex.what() << "\"" << std::endl;
@@ -366,34 +398,10 @@ void MainWindow::agentRadiusTextChanged(const QString &text) {
   bool conversionSuccessful{false};
   double newRadius = text.toDouble(&conversionSuccessful);
   if (conversionSuccessful) {
-    // Update value
-    agentRadius_ = newRadius;
-    // Update slider
-    if (!matchingAgentRadiusLineEditAndSlider_) {
-      // Someone manually changed this, update the other widget to match
-      matchingAgentRadiusLineEditAndSlider_ = true;
-      setAgentRadiusSlider();
-      matchingAgentRadiusLineEditAndSlider_ = false;
-    }
-    // Update navmesh
-    navmeshDisplay_->getNavmeshRenderArea()->setAgentRadius(agentRadius_);
-    // New path needs to be created
-    rebuildPath();
+    updateAgentRadius(newRadius);
   }
 }
 
 void MainWindow::agentRadiusSliderChanged(int value) {
-  // Update value
-  agentRadius_ = value;
-  // Update LineEdit
-  if (!matchingAgentRadiusLineEditAndSlider_) {
-    // Someone manually changed this, update the other widget to match
-    matchingAgentRadiusLineEditAndSlider_ = true;
-    setAgentRadiusLineEdit();
-    matchingAgentRadiusLineEditAndSlider_ = false;
-  }
-  // Update navmesh
-  navmeshDisplay_->getNavmeshRenderArea()->setAgentRadius(agentRadius_);
-  // New path needs to be created
-  rebuildPath();
+  updateAgentRadius(value);
 }
