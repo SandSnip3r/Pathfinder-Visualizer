@@ -30,7 +30,7 @@ Please see the [Wiki](https://github.com/SandSnip3r/Pathfinder-Visualizer/wiki) 
 
 - Zooming in too far leads to issues
 - A user is allowed to move the start and goal points to invalid locations (such as overlapping with an object)
-  - Note: This will result in weird path results. Read more in the [Pathfinder wiki(https://github.com/SandSnip3r/Pathfinder/wiki)
+  - Note: This will result in weird path results. Read more in the [Pathfinder wiki](https://github.com/SandSnip3r/Pathfinder/wiki)
 - A mouse click will not move the start/goal points, the mouse must be dragged while holding left click
 - I don't know of a good way to initialize configuration values with the actual data that was initialized
 - I've seen build issues on Windows where .PDB files are being accessed in parallel
