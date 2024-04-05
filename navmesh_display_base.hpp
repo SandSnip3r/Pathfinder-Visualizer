@@ -4,8 +4,6 @@
 #include "navmesh_render_area.hpp"
 #include "zoomable_scroll_area.hpp"
 
-#include <Pathfinder/pathfinder.h>
-
 #include <QWidget>
 
 class NavmeshDisplayBase : public QWidget {
@@ -14,6 +12,7 @@ class NavmeshDisplayBase : public QWidget {
 public:
   using QWidget::QWidget;
   virtual NavmeshRenderAreaBase* getNavmeshRenderArea() = 0;
+  virtual void setAgentRadius(double agentRadius) = 0;
   virtual void setPathStartPoint(const pathfinder::Vector &pos) = 0;
   virtual void setPathGoalPoint(const pathfinder::Vector &pos) = 0;
   virtual void setMousePosition(const pathfinder::Vector &pos) = 0;

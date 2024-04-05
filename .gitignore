@@ -80,3 +80,5 @@ build/
 
 # Qt files
 CMakeLists.txt.user.*
+
+tools/navmesh_gen

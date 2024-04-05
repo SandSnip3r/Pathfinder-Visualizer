@@ -1,5 +1,8 @@
 #include "navmesh_render_area_base.hpp"
 
+#include <absl/log/log.h>
+#include <absl/strings/str_format.h>
+
 void NavmeshRenderAreaBase::resetZoom() {
   zoomLevel_ = 0;
   resizeForNewZoom();
@@ -92,6 +95,20 @@ void NavmeshRenderAreaBase::setPathGoalPoint(const pathfinder::Vector &point) {
   update();
 }
 
+void NavmeshRenderAreaBase::addPairsDistance(double x, double y, double distance) {
+  if (distance != std::numeric_limits<double>::max() &&
+      distance != std::numeric_limits<double>::lowest()) {
+    allPairsMaxDistance_ = std::max(allPairsMaxDistance_, distance);
+  }
+  allPairsRowToColToDistanceMap_[x][y] = distance;
+  update();
+}
+
+void NavmeshRenderAreaBase::resetAllPairsDistanceMap() {
+  allPairsMaxDistance_ = 0.0;
+  allPairsRowToColToDistanceMap_.clear();
+}
+
 void NavmeshRenderAreaBase::resetPathStart() {
   startPoint_.reset();
 }
@@ -145,5 +162,15 @@ void NavmeshRenderAreaBase::setDisplayEdgeLabels(bool shouldDisplay) {
 
 void NavmeshRenderAreaBase::setDisplayVertexLabels(bool shouldDisplay) {
   displayVertexLabels_ = shouldDisplay;
+  update();
+}
+
+void NavmeshRenderAreaBase::setAllPairsShowNoPathToGoal(bool shouldDisplay) {
+  displayAllPairsNoPathToGoal_ = shouldDisplay;
+  update();
+}
+
+void NavmeshRenderAreaBase::setAllPairsShowException(bool shouldDisplay) {
+  displayAllPairsException_ = shouldDisplay;
   update();
 }

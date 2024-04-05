@@ -1,12 +1,14 @@
 #ifndef NAVMESH_RENDER_AREA_BASE_HPP_
 #define NAVMESH_RENDER_AREA_BASE_HPP_
 
-#include <Pathfinder/pathfinder.h>
-#include <Pathfinder/triangle_lib_navmesh.h>
 #include <Pathfinder/vector.h>
 
 #include <QColor>
+#include <QString>
+#include <QTimer>
 #include <QWidget>
+
+#include <map>
 
 class NavmeshRenderAreaBase : public QWidget {
   Q_OBJECT
@@ -26,9 +28,16 @@ public:
   bool getDisplayEdgeLabels() const;
   bool getDisplayVertexLabels() const;
 
+  virtual double getNavmeshMinX() const = 0;
+  virtual double getNavmeshMinY() const = 0;
+  virtual double getNavmeshWidth() const = 0;
+  virtual double getNavmeshHeight() const = 0;
+
   void setAgentRadius(double agentRadius);
   void setPathStartPoint(const pathfinder::Vector &point);
   void setPathGoalPoint(const pathfinder::Vector &point);
+  void addPairsDistance(double x, double y, double distance);
+  void resetAllPairsDistanceMap();
   void resetPathStart();
   void resetPathGoal();
   virtual void resetPath() = 0;
@@ -55,10 +64,17 @@ protected:
   bool displayEdgeLabels_{false};
   bool displayVertexLabels_{false};
 
+  bool displayAllPairsNoPathToGoal_{true};
+  bool displayAllPairsException_{true};
+
   // Pathfinding data
   double agentRadius_{0.0};
   std::optional<pathfinder::Vector> startPoint_;
   std::optional<pathfinder::Vector> goalPoint_;
+
+  // Pathfinding all-pairs
+  double allPairsMaxDistance_{0.0};
+  std::map<double, std::map<double, double>> allPairsRowToColToDistanceMap_;
 
   QSize currentSize() const;
   void resizeForNewZoom();
@@ -71,6 +87,9 @@ signals:
   void movingMouseOnNavmesh(const pathfinder::Vector &navmeshPoint);
   // void mouseClickedOnNavmesh(const pathfinder::Vector &navmeshPoint);
 
+  // Polyanya animation
+  void animationDataUpdated(int currentIndex, int frameCount);
+
 public slots:
   void setDisplayVertices(bool shouldDisplay);
   void setDisplayNonConstraintEdges(bool shouldDisplay);
@@ -80,6 +99,16 @@ public slots:
   void setDisplayTriangleLabels(bool shouldDisplay);
   void setDisplayEdgeLabels(bool shouldDisplay);
   void setDisplayVertexLabels(bool shouldDisplay);
+  void setAllPairsShowNoPathToGoal(bool shouldDisplay);
+  void setAllPairsShowException(bool shouldDisplay);
+
+  // Polyanya animation
+  virtual void stepBackPlaybackAnimation() = 0;
+  virtual void startPlaybackAnimation() = 0;
+  virtual void pausePlaybackAnimation() = 0;
+  virtual void stopPlaybackAnimation() = 0;
+  virtual void stepForwardPlaybackAnimation() = 0;
+  virtual void setFramePlaybackAnimation(const QString &text) = 0;
 };
 
 #endif // NAVMESH_RENDER_AREA_BASE_HPP_

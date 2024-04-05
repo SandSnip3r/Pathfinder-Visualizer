@@ -31,11 +31,13 @@ QWidget* NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::create
   // First, create the left section for displaying info about the navmesh
   QGroupBox *navmeshInfoGroupBox = new QGroupBox(tr("Navmesh Info"));
   QVBoxLayout *navmeshInfoLayout = new QVBoxLayout;
+  navmeshNameLabel_ = new QLabel(navmeshNameLabelContents());
   vertexCountLabel_ = new QLabel(vertexCountLabelContents());
   triangleCountLabel_ = new QLabel(triangleCountLabelContents());
   totalEdgeCountLabel_ = new QLabel(totalEdgeCountLabelContents());
   constrainedEdgeCountLabel_ = new QLabel(constrainedEdgeCountLabelContents());
   mousePositionLabel_ = new QLabel(mousePositionLabelContents());
+  navmeshInfoLayout->addWidget(navmeshNameLabel_);
   navmeshInfoLayout->addWidget(vertexCountLabel_);
   navmeshInfoLayout->addWidget(triangleCountLabel_);
   navmeshInfoLayout->addWidget(totalEdgeCountLabel_);
@@ -48,14 +50,36 @@ QWidget* NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::create
 
   // Second, create the right section for displaying info about the path found
   QGroupBox *pathInfoGroupBox = new QGroupBox(tr("Path Info"));
-  QVBoxLayout *pathInfoLayout = new QVBoxLayout;
+  QGridLayout *pathInfoLayout = new QGridLayout;
   pathStartPositionLabel_ = new QLabel(pathStartPointLabelContents());
   pathGoalPositionLabel_ = new QLabel(pathGoalPointLabelContents());
+
+  QPushButton *copyPathAsCodeButton = new QPushButton("Copy as code");
+  connect(copyPathAsCodeButton, &QPushButton::pressed, [this](){
+    QString formattedText = QString::fromStdString(
+      absl::StrFormat("updateAgentRadius(%.5f);\n"\
+                      "    movePathStart({%.30f, %.30f});\n"\
+                      "    movePathGoal({%.30f, %.30f});",
+                      agentRadius_, pathStartPoint_.x(), pathStartPoint_.y(), pathGoalPoint_.x(), pathGoalPoint_.y()));
+    QGuiApplication::clipboard()->setText(formattedText);
+  });
+
+  QPushButton *copyPathAsTestCaseButton = new QPushButton("Copy as test case");
+  connect(copyPathAsTestCaseButton, &QPushButton::pressed, [this](){
+    QString formattedText = QString::fromStdString(
+      absl::StrFormat("NonStraightPathParams{\"%s\", {%.30f, %.30f}, {%.30f, %.30f}, %.30f, %.30f, 1e-100 }",
+                      navmeshName_, pathStartPoint_.x(), pathStartPoint_.y(), pathGoalPoint_.x(), pathGoalPoint_.y(), agentRadius_, pathLength_));
+    QGuiApplication::clipboard()->setText(formattedText);
+  });
+
   pathLengthLabel_ = new QLabel(pathLengthLabelContents());
-  pathInfoLayout->addWidget(pathStartPositionLabel_);
-  pathInfoLayout->addWidget(pathGoalPositionLabel_);
-  pathInfoLayout->addWidget(pathLengthLabel_);
-  pathInfoLayout->setAlignment(Qt::AlignTop);
+  pathInfoLayout->addWidget(pathStartPositionLabel_, 0, 0, 1, 1);
+  pathInfoLayout->addWidget(pathGoalPositionLabel_, 1, 0, 1, 1);
+  pathInfoLayout->addWidget(copyPathAsCodeButton, 0, 1, 1, 1);
+  pathInfoLayout->addWidget(copyPathAsTestCaseButton, 1, 1, 1, 1);
+  pathInfoLayout->addWidget(pathLengthLabel_, 2, 0, -1, 1);
+  pathInfoLayout->setRowStretch(pathInfoLayout->rowCount(), 1);
+
   pathInfoGroupBox->setLayout(pathInfoLayout);
   // Add this groupbox to the overall layout
   layout->addWidget(pathInfoGroupBox);
@@ -69,6 +93,17 @@ QWidget* NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::create
 template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
 NavmeshRenderAreaBase* NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::getNavmeshRenderArea() {
   return navmeshRenderArea_;
+}
+
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::setNavmeshName(absl::string_view name) {
+  // Remove "./" from the beginning if it's there
+  int beginIndex = 0;
+  if (name.size() >= 2 && name[0] == '.' && name[1] == '/') {
+    beginIndex = 2;
+  }
+  navmeshName_ = std::string(name.begin()+beginIndex, name.end());
+  navmeshNameLabel_->setText(navmeshNameLabelContents(navmeshName_));
 }
 
 template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
@@ -94,15 +129,23 @@ void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::setNavmesh
 }
 
 template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::setAgentRadius(double agentRadius) {
+  agentRadius_ = agentRadius;
+  navmeshRenderArea_->setAgentRadius(agentRadius_);
+}
+
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
 void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::setPathStartPoint(const pathfinder::Vector &pos) {
-  navmeshRenderArea_->setPathStartPoint(pos);
-  pathStartPositionLabel_->setText(pathStartPointLabelContents(pos));
+  pathStartPoint_ = pos;
+  navmeshRenderArea_->setPathStartPoint(pathStartPoint_);
+  pathStartPositionLabel_->setText(pathStartPointLabelContents(pathStartPoint_));
 }
 
 template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
 void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::setPathGoalPoint(const pathfinder::Vector &pos) {
-  navmeshRenderArea_->setPathGoalPoint(pos);
-  pathGoalPositionLabel_->setText(pathGoalPointLabelContents(pos));
+  pathGoalPoint_ = pos;
+  navmeshRenderArea_->setPathGoalPoint(pathGoalPoint_);
+  pathGoalPositionLabel_->setText(pathGoalPointLabelContents(pathGoalPoint_));
 }
 
 template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
@@ -114,7 +157,8 @@ template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
 void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::setPath(const PathfindingResult &pathfindingResult) {
   auto &specificNavmeshRenderArea = dynamic_cast<NavmeshRenderAreaType&>(*navmeshRenderArea_);
   specificNavmeshRenderArea.setPath(pathfindingResult);
-  pathLengthLabel_->setText(pathLengthLabelContents(calculatePathLength(pathfindingResult.shortestPath)));
+  pathLength_ = calculatePathLength(pathfindingResult.shortestPath);
+  pathLengthLabel_->setText(pathLengthLabelContents(pathLength_));
 }
 
 template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
@@ -140,7 +184,7 @@ void NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::resetPath(
 template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
 QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::pathStartPointLabelContents(const std::optional<pathfinder::Vector> &pos) const {
   if (pos) {
-    return QString(tr("Path Start Point: %1,%2").arg(QString::number(pos->x(), 'f', 3), QString::number(pos->y(), 'f', 3)));
+    return QString(tr("Path Start Point: %1,%2").arg(QString::number(pos->x(), 'f', 5), QString::number(pos->y(), 'f', 5)));
   } else {
     return QString(tr("Path Start Point: None"));
   }
@@ -149,7 +193,7 @@ QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::pathSta
 template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
 QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::pathGoalPointLabelContents(const std::optional<pathfinder::Vector> &pos) const {
   if (pos) {
-    return QString(tr("Path Goal Point: %1,%2").arg(QString::number(pos->x(), 'f', 3), QString::number(pos->y(), 'f', 3)));
+    return QString(tr("Path Goal Point: %1,%2").arg(QString::number(pos->x(), 'f', 5), QString::number(pos->y(), 'f', 5)));
   } else {
     return QString(tr("Path Goal Point: None"));
   }
@@ -158,9 +202,18 @@ QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::pathGoa
 template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
 QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::pathLengthLabelContents(const std::optional<double> &length) const {
   if (length) {
-    return QString(tr("Path length: %1").arg(QString::number(*length, 'f', 5)));
+    return QString(tr("Path length: %1").arg(QString::number(*length, 'f', 8)));
   } else {
     return QString(tr("Path length: None"));
+  }
+}
+
+template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
+QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::navmeshNameLabelContents(const std::optional<absl::string_view> &name) const {
+  if (name) {
+    return QString(tr("Navmesh name: %1").arg(QString(name->data())));
+  } else {
+    return QString(tr("Navmesh name: None"));
   }
 }
 
@@ -203,7 +256,7 @@ QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::constra
 template<typename NavmeshTriangulationType, typename NavmeshRenderAreaType>
 QString NavmeshDisplay<NavmeshTriangulationType, NavmeshRenderAreaType>::mousePositionLabelContents(const std::optional<pathfinder::Vector> &pos) const {
   if (pos) {
-    return QString(tr("Mouse Position: %1,%2").arg(QString::number(pos->x(), 'f', 3), QString::number(pos->y(), 'f', 3)));
+    return QString(tr("Mouse Position: %1,%2").arg(QString::number(pos->x(), 'f', 5), QString::number(pos->y(), 'f', 5)));
   } else {
     return QString(tr("Mouse Position: None"));
   }
