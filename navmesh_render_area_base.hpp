@@ -21,9 +21,6 @@ public:
 
   bool getDisplayVertices() const;
   bool getDisplayNonConstraintEdges() const;
-  bool getDisplayTriangleCorridor() const;
-  bool getDisplayTrianglesCompletelySearched() const;
-  bool getDisplayTrianglesVisited() const;
   bool getDisplayTriangleLabels() const;
   bool getDisplayEdgeLabels() const;
   bool getDisplayVertexLabels() const;
@@ -55,10 +52,6 @@ protected:
   // Display configurations
   bool displayVertices_{false};
   bool displayNonConstraintEdges_{true};
-
-  bool displayTriangleCorridor_{false};
-  bool displayTrianglesCompletelySearched_{false};
-  bool displayTrianglesVisited_{false};
 
   bool displayTriangleLabels_{false};
   bool displayEdgeLabels_{false};
@@ -93,9 +86,6 @@ signals:
 public slots:
   void setDisplayVertices(bool shouldDisplay);
   void setDisplayNonConstraintEdges(bool shouldDisplay);
-  void setDisplayTriangleCorridor(bool shouldDisplay);
-  void setDisplayTrianglesCompletelySearched(bool shouldDisplay);
-  void setDisplayTrianglesVisited(bool shouldDisplay);
   void setDisplayTriangleLabels(bool shouldDisplay);
   void setDisplayEdgeLabels(bool shouldDisplay);
   void setDisplayVertexLabels(bool shouldDisplay);

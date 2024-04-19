@@ -168,18 +168,6 @@ void NavmeshRenderArea<NavmeshTriangulationType>::paintEvent(QPaintEvent * /* ev
     }
     drawEdges(painter);
 
-    if (displayTriangleCorridor_) {
-      drawTriangleCorridor(painter);
-    }
-
-    if (displayTrianglesCompletelySearched_) {
-      drawTrianglesCompletelySearched(painter);
-    }
-
-    if (displayTrianglesVisited_) {
-      drawTrianglesVisited(painter);
-    }
-
     // Draw pathfinding data
     bool shouldDrawShortestPath{true};
     if constexpr (PathfinderType::hasDebugAnimationData()) {
@@ -565,64 +553,6 @@ void NavmeshRenderArea<NavmeshTriangulationType>::drawPathfindingStartAndGoal(QP
   }
 
   painter.restore();
-}
-
-template<typename NavmeshTriangulationType>
-void NavmeshRenderArea<NavmeshTriangulationType>::drawTriangleCorridor(QPainter &painter) {
-  if (pathfindingResult_ != nullptr) {
-    const QColor kTriangleColor(0, 255, 0, 33);
-    painter.save();
-    drawTriangles(painter, pathfindingResult_->aStarInfo.triangleCorridor, kTriangleColor);
-    painter.restore();
-  }
-}
-
-template<typename NavmeshTriangulationType>
-void NavmeshRenderArea<NavmeshTriangulationType>::drawTrianglesCompletelySearched(QPainter &painter) {
-  if (pathfindingResult_ != nullptr) {
-    const QColor kTriangleColor(255, 255, 0, 33);
-    painter.save();
-    std::vector<IndexType> triangles;
-    std::copy_if(pathfindingResult_->aStarInfo.trianglesSearched.begin(), pathfindingResult_->aStarInfo.trianglesSearched.end(), std::back_inserter(triangles), [this](const auto triangleIndex){
-      // Return true if this isnt in the triangle corridor (and the corridor isnt being displayed)
-      if (displayTriangleCorridor_) {
-        if (std::find(pathfindingResult_->aStarInfo.triangleCorridor.begin(), pathfindingResult_->aStarInfo.triangleCorridor.end(), triangleIndex) != pathfindingResult_->aStarInfo.triangleCorridor.end()) {
-          // This triangle is a part of the corridor
-          return false;
-        }
-      }
-      return true;
-    });
-    drawTriangles(painter, triangles, kTriangleColor);
-    painter.restore();
-  }
-}
-
-template<typename NavmeshTriangulationType>
-void NavmeshRenderArea<NavmeshTriangulationType>::drawTrianglesVisited(QPainter &painter) {
-  if (pathfindingResult_ != nullptr) {
-    const QColor kTriangleColor(255, 127, 0, 33);
-    painter.save();
-    std::vector<IndexType> triangles;
-    std::copy_if(pathfindingResult_->aStarInfo.trianglesDiscovered.begin(), pathfindingResult_->aStarInfo.trianglesDiscovered.end(), std::back_inserter(triangles), [this](const auto triangleNum){
-      // Return true if this isnt in the triangle corridor (and the corridor isnt being displayed)
-      if (displayTriangleCorridor_) {
-        if (std::find(pathfindingResult_->aStarInfo.triangleCorridor.begin(), pathfindingResult_->aStarInfo.triangleCorridor.end(), triangleNum) != pathfindingResult_->aStarInfo.triangleCorridor.end()) {
-          // This triangle is a part of the corridor
-          return false;
-        }
-      }
-      if (displayTrianglesCompletelySearched_) {
-        if (std::find(pathfindingResult_->aStarInfo.trianglesSearched.begin(), pathfindingResult_->aStarInfo.trianglesSearched.end(), triangleNum) != pathfindingResult_->aStarInfo.trianglesSearched.end()) {
-          // This triangle is a part of the completely searched triangles
-          return false;
-        }
-      }
-      return true;
-    });
-    drawTriangles(painter, triangles, kTriangleColor);
-    painter.restore();
-  }
 }
 
 template<typename NavmeshTriangulationType>

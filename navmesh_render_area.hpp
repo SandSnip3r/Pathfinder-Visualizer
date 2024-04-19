@@ -87,9 +87,6 @@ private:
   void drawAllPairsDistances(QPainter &painter);
   void drawPathfindingStartAndGoal(QPainter &painter);
   void drawTriangles(QPainter &painter, const std::vector<IndexType> &triangles, const QColor &color);
-  void drawTriangleCorridor(QPainter &painter);
-  void drawTrianglesCompletelySearched(QPainter &painter);
-  void drawTrianglesVisited(QPainter &painter);
 
   void drawVertexLabels(QPainter &painter);
   void drawEdgeLabels(QPainter &painter);

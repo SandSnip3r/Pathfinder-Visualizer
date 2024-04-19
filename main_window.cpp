@@ -382,10 +382,6 @@ void MainWindow::createConfigDock() {
   verticesCheckBox_ = new QCheckBox(tr("Show Vertices"));
   nonConstraintEdgesCheckBox_ = new QCheckBox(tr("Show Non-Constraint Edges"));
 
-  triangleCorridorCheckBox_ = new QCheckBox(tr("Show Triangle Corridor"));
-  trianglesCompletelySearchedCheckBox_ = new QCheckBox(tr("Show Triangles Completely Searched"));
-  trianglesVisitedCheckBox_ = new QCheckBox(tr("Show Triangles Visited"));
-
   triangleLabelsCheckBox_ = new QCheckBox(tr("Show Triangle Labels"));
   edgeLabelsCheckBox_ = new QCheckBox(tr("Show Edge Labels"));
   vertexLabelsCheckBox_ = new QCheckBox(tr("Show Vertex Labels"));
@@ -416,40 +412,10 @@ void MainWindow::createConfigDock() {
   QGridLayout *navmeshTriangulationVisualizationOptionsLayout = new QGridLayout;
   navmeshTriangulationVisualizationOptionsLayout->addWidget(verticesCheckBox_, 0, 0, 1, 1);
   navmeshTriangulationVisualizationOptionsLayout->addWidget(nonConstraintEdgesCheckBox_, 1, 0, 1, 1);
-  navmeshTriangulationVisualizationOptionsLayout->addWidget(triangleCorridorCheckBox_, 2, 0, 1, 1);
-  navmeshTriangulationVisualizationOptionsLayout->addWidget(trianglesCompletelySearchedCheckBox_, 3, 0, 1, 1);
-  navmeshTriangulationVisualizationOptionsLayout->addWidget(trianglesVisitedCheckBox_, 4, 0, 1, 1);
-  navmeshTriangulationVisualizationOptionsLayout->addWidget(triangleLabelsCheckBox_, 5, 0, 1, 1);
-  navmeshTriangulationVisualizationOptionsLayout->addWidget(edgeLabelsCheckBox_, 6, 0, 1, 1);
-  navmeshTriangulationVisualizationOptionsLayout->addWidget(vertexLabelsCheckBox_, 7, 0, 1, 1);
-  navmeshTriangulationVisualizationOptionsLayout->addWidget(polyanyaAnimationGroupbox, 8, 0, 1, 1);
-
-  // Polyanya animation widget
-
-  // The triangles being displayed will require that the non-constraint edges are shown
-  // Connect the checkboxes to prevent triangles being displayed without the edges being shown
-  connect(nonConstraintEdgesCheckBox_, &QCheckBox::toggled, [this](bool checked) {
-    if (!checked) {
-      triangleCorridorCheckBox_->setChecked(false);
-      trianglesCompletelySearchedCheckBox_->setChecked(false);
-      trianglesVisitedCheckBox_->setChecked(false);
-    }
-  });
-  connect(triangleCorridorCheckBox_, &QCheckBox::toggled, [this](bool checked){
-    if (checked) {
-      nonConstraintEdgesCheckBox_->setChecked(true);
-    }
-  });
-  connect(trianglesCompletelySearchedCheckBox_, &QCheckBox::toggled, [this](bool checked){
-    if (checked) {
-      nonConstraintEdgesCheckBox_->setChecked(true);
-    }
-  });
-  connect(trianglesVisitedCheckBox_, &QCheckBox::toggled, [this](bool checked){
-    if (checked) {
-      nonConstraintEdgesCheckBox_->setChecked(true);
-    }
-  });
+  navmeshTriangulationVisualizationOptionsLayout->addWidget(triangleLabelsCheckBox_, 2, 0, 1, 1);
+  navmeshTriangulationVisualizationOptionsLayout->addWidget(edgeLabelsCheckBox_, 3, 0, 1, 1);
+  navmeshTriangulationVisualizationOptionsLayout->addWidget(vertexLabelsCheckBox_, 4, 0, 1, 1);
+  navmeshTriangulationVisualizationOptionsLayout->addWidget(polyanyaAnimationGroupbox, 5, 0, 1, 1);
 
   QGroupBox *navmeshTriangulationGroupbox = new QGroupBox("Navmesh Triangulation");
   navmeshTriangulationGroupbox->setLayout(navmeshTriangulationVisualizationOptionsLayout);
@@ -483,9 +449,6 @@ void MainWindow::populateConfigDock() {
   }
   verticesCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayVertices());
   nonConstraintEdgesCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayNonConstraintEdges());
-  triangleCorridorCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayTriangleCorridor());
-  trianglesCompletelySearchedCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayTrianglesCompletelySearched());
-  trianglesVisitedCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayTrianglesVisited());
   triangleLabelsCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayTriangleLabels());
   edgeLabelsCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayEdgeLabels());
   vertexLabelsCheckBox_->setChecked(navmeshDisplay_->getNavmeshRenderArea()->getDisplayVertexLabels());
@@ -501,9 +464,6 @@ void MainWindow::createConnectionsToNavmeshDisplay() {
   // Configuration
   connect(verticesCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayVertices);
   connect(nonConstraintEdgesCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayNonConstraintEdges);
-  connect(triangleCorridorCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayTriangleCorridor);
-  connect(trianglesCompletelySearchedCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayTrianglesCompletelySearched);
-  connect(trianglesVisitedCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayTrianglesVisited);
   connect(triangleLabelsCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayTriangleLabels);
   connect(edgeLabelsCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayEdgeLabels);
   connect(vertexLabelsCheckBox_, &QCheckBox::toggled, navmeshDisplay_->getNavmeshRenderArea(), &NavmeshRenderAreaBase::setDisplayVertexLabels);

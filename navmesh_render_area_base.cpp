@@ -26,18 +26,6 @@ bool NavmeshRenderAreaBase::getDisplayNonConstraintEdges() const {
   return displayNonConstraintEdges_;
 }
 
-bool NavmeshRenderAreaBase::getDisplayTriangleCorridor() const {
-  return displayTriangleCorridor_;
-}
-
-bool NavmeshRenderAreaBase::getDisplayTrianglesCompletelySearched() const {
-  return displayTrianglesCompletelySearched_;
-}
-
-bool NavmeshRenderAreaBase::getDisplayTrianglesVisited() const {
-  return displayTrianglesVisited_;
-}
-
 bool NavmeshRenderAreaBase::getDisplayTriangleLabels() const {
   return displayTriangleLabels_;
 }
@@ -132,21 +120,6 @@ void NavmeshRenderAreaBase::setDisplayVertices(bool shouldDisplay) {
 
 void NavmeshRenderAreaBase::setDisplayNonConstraintEdges(bool shouldDisplay) {
   displayNonConstraintEdges_ = shouldDisplay;
-  update();
-}
-
-void NavmeshRenderAreaBase::setDisplayTriangleCorridor(bool shouldDisplay) {
-  displayTriangleCorridor_ = shouldDisplay;
-  update();
-}
-
-void NavmeshRenderAreaBase::setDisplayTrianglesCompletelySearched(bool shouldDisplay) {
-  displayTrianglesCompletelySearched_ = shouldDisplay;
-  update();
-}
-
-void NavmeshRenderAreaBase::setDisplayTrianglesVisited(bool shouldDisplay) {
-  displayTrianglesVisited_ = shouldDisplay;
   update();
 }
 
