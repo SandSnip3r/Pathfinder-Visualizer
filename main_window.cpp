@@ -406,8 +406,8 @@ void MainWindow::createConfigDock() {
   polyanyaVerticalLayout->addWidget(playbackButtonsWidget);
   polyanyaVerticalLayout->addWidget(animationCurrentFrameLineEdit_);
   polyanyaVerticalLayout->addWidget(animationFrameCountLabel_);
-  QGroupBox *polyanyaAnimationGroupbox = new QGroupBox("Polyanya Animation");
-  polyanyaAnimationGroupbox->setLayout(polyanyaVerticalLayout);
+  polyanyaAnimationGroupbox_ = new QGroupBox("Polyanya Animation");
+  polyanyaAnimationGroupbox_->setLayout(polyanyaVerticalLayout);
 
   QGridLayout *navmeshTriangulationVisualizationOptionsLayout = new QGridLayout;
   navmeshTriangulationVisualizationOptionsLayout->addWidget(verticesCheckBox_, 0, 0, 1, 1);
@@ -415,7 +415,7 @@ void MainWindow::createConfigDock() {
   navmeshTriangulationVisualizationOptionsLayout->addWidget(triangleLabelsCheckBox_, 2, 0, 1, 1);
   navmeshTriangulationVisualizationOptionsLayout->addWidget(edgeLabelsCheckBox_, 3, 0, 1, 1);
   navmeshTriangulationVisualizationOptionsLayout->addWidget(vertexLabelsCheckBox_, 4, 0, 1, 1);
-  navmeshTriangulationVisualizationOptionsLayout->addWidget(polyanyaAnimationGroupbox, 5, 0, 1, 1);
+  navmeshTriangulationVisualizationOptionsLayout->addWidget(polyanyaAnimationGroupbox_, 5, 0, 1, 1);
 
   QGroupBox *navmeshTriangulationGroupbox = new QGroupBox("Navmesh Triangulation");
   navmeshTriangulationGroupbox->setLayout(navmeshTriangulationVisualizationOptionsLayout);
@@ -635,6 +635,12 @@ void MainWindow::openPolyFile(const QString &filename) {
   try {
     // Try to open the file and build the navmesh triangulation.
     buildTriangleLibNavmeshTriangulationFromFile(filename);
+
+    if constexpr (TriangleLibPathfinderType::hasDebugAnimationData()) {
+      polyanyaAnimationGroupbox_->setEnabled(true);
+    } else {
+      polyanyaAnimationGroupbox_->setEnabled(false);
+    }
 
     // Build the navmesh display for this type of navmesh triangulation.
     createNavmeshDisplay<NavmeshDisplay<TriangleLibNavmeshTriangulationType>>();

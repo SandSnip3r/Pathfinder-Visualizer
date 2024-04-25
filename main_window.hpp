@@ -81,6 +81,7 @@ private:
   QCheckBox *vertexLabelsCheckBox_;
   
   // Polyanya animation UI elements
+  QGroupBox *polyanyaAnimationGroupbox_;
   QPushButton *stepBackPlaybackButton_;
   QPushButton *startPlaybackButton_;
   QPushButton *pausePlaybackButton_;

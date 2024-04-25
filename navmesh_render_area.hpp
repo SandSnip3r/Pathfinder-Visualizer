@@ -70,12 +70,10 @@ private:
   QTimer *animationTimer_{nullptr};
   int animationIndex_;
   std::vector<std::pair<size_t, size_t>> ends_;
-  struct Triangle {
-    Triangle(const pathfinder::Vector &va, const pathfinder::Vector &vb, const pathfinder::Vector &vc) : vertexA(va), vertexB(vb), vertexC(vc) {}
-    pathfinder::Vector vertexA, vertexB, vertexC;
-  };
-  std::vector<Triangle> pushedTriangles_;
-  std::vector<Triangle> visitedTriangles_;
+  std::vector<typename PathfinderType::IntervalType> pushedIntervals_;
+  std::vector<typename PathfinderType::IntervalType> visitedIntervals_;
+  std::vector<std::optional<QPolygonF>> pushedIntervalsAsQPolygonF_;
+  std::vector<std::optional<QPolygonF>> visitedIntervalsAsQPolygonF_;
 
   void setSizeBasedOnNavmesh();
 
@@ -95,6 +93,7 @@ private:
   // Polyanya animation
   void advanceAnimationFrame();
   void preProcessAnimationData();
+  std::optional<QPolygonF> intervalToQPolygonF(const typename PathfinderType::IntervalType &interval) const;
 };
 
 #include "navmesh_render_area.inl"

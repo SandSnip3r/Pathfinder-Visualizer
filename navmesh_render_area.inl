@@ -356,6 +356,23 @@ void NavmeshRenderArea<NavmeshTriangulationType>::drawEdges(QPainter &painter) {
 }
 
 template<typename NavmeshTriangulationType>
+std::optional<QPolygonF> NavmeshRenderArea<NavmeshTriangulationType>::intervalToQPolygonF(const typename PathfinderType::IntervalType &interval) const {
+  if (interval.leftIsRoot() || interval.rightIsRoot()) {
+    // No triangle to draw
+    return {};
+  }
+  const auto [leftIntervalStart, leftIntervalEnd] = pathfinder::math::createCircleConsciousLine(interval.rootPoint, interval.rootDirection, interval.leftPoint, interval.leftDirection(), agentRadius_);
+  const auto [rightIntervalStart, rightIntervalEnd] = pathfinder::math::createCircleConsciousLine(interval.rootPoint, interval.rootDirection, interval.rightPoint, interval.rightDirection(), agentRadius_);
+  const auto transformedLeftIntervalStart = transformNavmeshCoordinateToWidgetCoordinate(leftIntervalStart);
+  const auto transformedLeftIntervalEnd = transformNavmeshCoordinateToWidgetCoordinate(leftIntervalEnd);
+  const auto transformedRightIntervalStart = transformNavmeshCoordinateToWidgetCoordinate(rightIntervalStart);
+  const auto transformedRightIntervalEnd = transformNavmeshCoordinateToWidgetCoordinate(rightIntervalEnd);
+  QPolygonF poly;
+  poly << QPointF{transformedLeftIntervalStart.x(),transformedLeftIntervalStart.y()} << QPointF{transformedLeftIntervalEnd.x(),transformedLeftIntervalEnd.y()} << QPointF{transformedRightIntervalEnd.x(),transformedRightIntervalEnd.y()} << QPointF{transformedRightIntervalStart.x(),transformedRightIntervalStart.y()};
+  return poly;
+}
+
+template<typename NavmeshTriangulationType>
 void NavmeshRenderArea<NavmeshTriangulationType>::drawAnimatedPathfinding(QPainter &painter) {
   if constexpr (PathfinderType::hasDebugAnimationData()) {
     if (pathfindingResult_ == nullptr) {
@@ -377,13 +394,10 @@ void NavmeshRenderArea<NavmeshTriangulationType>::drawAnimatedPathfinding(QPaint
       painter.setPen(Qt::NoPen);
       painter.setBrush(QColor(255,165,0));
       for (int i=0; i<pushedEnd; ++i) {
-        const auto &pushedTriangle = pushedTriangles_.at(i);
-        const auto transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(pushedTriangle.vertexA);
-        const auto transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(pushedTriangle.vertexB);
-        const auto transformedVertexC = transformNavmeshCoordinateToWidgetCoordinate(pushedTriangle.vertexC);
-        QPolygonF triangle;
-        triangle << QPointF{transformedVertexA.x(),transformedVertexA.y()} << QPointF{transformedVertexB.x(),transformedVertexB.y()} << QPointF{transformedVertexC.x(),transformedVertexC.y()};
-        painter.drawPolygon(triangle);
+        const auto &pushedIntervalQPolygonF = pushedIntervalsAsQPolygonF_.at(i);
+        if (pushedIntervalQPolygonF) {
+          painter.drawPolygon(*pushedIntervalQPolygonF);
+        }
       }
     }
     // Second, draw all visited triangles.
@@ -391,25 +405,19 @@ void NavmeshRenderArea<NavmeshTriangulationType>::drawAnimatedPathfinding(QPaint
       painter.setPen(Qt::NoPen);
       painter.setBrush(Qt::yellow);
       for (int i=0; i<visitedEnd; ++i) {
-        const auto &visitedTriangle = visitedTriangles_.at(i);
-        const auto transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(visitedTriangle.vertexA);
-        const auto transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(visitedTriangle.vertexB);
-        const auto transformedVertexC = transformNavmeshCoordinateToWidgetCoordinate(visitedTriangle.vertexC);
-        QPolygonF triangle;
-        triangle << QPointF{transformedVertexA.x(),transformedVertexA.y()} << QPointF{transformedVertexB.x(),transformedVertexB.y()} << QPointF{transformedVertexC.x(),transformedVertexC.y()};
-        painter.drawPolygon(triangle);
+        const auto &visitedIntervalQPolygonF = visitedIntervalsAsQPolygonF_.at(i);
+        if (visitedIntervalQPolygonF) {
+          painter.drawPolygon(*visitedIntervalQPolygonF);
+        }
       }
       // Third, if there is a current interval, draw the path to its root and then the triangle itself.
       if (visitedEnd > 0) {
         painter.setBrush(Qt::green);
         // The last visited triangle is our current triangle.
-        const auto &currentTriangle = visitedTriangles_.at(visitedEnd-1);
-        const auto transformedVertexA = transformNavmeshCoordinateToWidgetCoordinate(currentTriangle.vertexA);
-        const auto transformedVertexB = transformNavmeshCoordinateToWidgetCoordinate(currentTriangle.vertexB);
-        const auto transformedVertexC = transformNavmeshCoordinateToWidgetCoordinate(currentTriangle.vertexC);
-        QPolygonF triangle;
-        triangle << QPointF{transformedVertexA.x(),transformedVertexA.y()} << QPointF{transformedVertexB.x(),transformedVertexB.y()} << QPointF{transformedVertexC.x(),transformedVertexC.y()};
-        painter.drawPolygon(triangle);
+        const auto &visitedIntervalQPolygonF = visitedIntervalsAsQPolygonF_.at(visitedEnd-1);
+        if (visitedIntervalQPolygonF) {
+          painter.drawPolygon(*visitedIntervalQPolygonF);
+        }
         {
           // Draw the path to the root of the current interval.
           const double kPathThickness = 1.5 / getScale();
@@ -418,17 +426,18 @@ void NavmeshRenderArea<NavmeshTriangulationType>::drawAnimatedPathfinding(QPaint
           QPen pen(kPathColor);
           pen.setWidthF(kPathThickness);
           painter.setPen(pen);
-          auto currentInterval = PathfinderType::PathfindingAStarInfo::IntervalType(currentTriangle.vertexA, currentTriangle.vertexB, currentTriangle.vertexC);
-          auto it = pathfindingResult_->aStarInfo.previousInterval.find(currentInterval);
-          while (it != pathfindingResult_->aStarInfo.previousInterval.end()) {
+          typename PathfinderType::IntervalType currentInterval = visitedIntervals_.at(visitedEnd-1);
+          auto it = pathfindingResult_->debugAStarInfo.previous.find(currentInterval);
+          while (it != pathfindingResult_->debugAStarInfo.previous.end()) {
             // Draw a line from currentInterval to *it.
-            if (std::get<0>(currentInterval) != std::get<0>(it->second)) {
-              const auto &point1 = transformNavmeshCoordinateToWidgetCoordinate(std::get<0>(currentInterval));
-              const auto &point2 = transformNavmeshCoordinateToWidgetCoordinate(std::get<0>(it->second));
+            if (currentInterval.rootPoint != it->second.rootPoint) {
+              const auto [lineStart, lineEnd] = pathfinder::math::createCircleConsciousLine(it->second.rootPoint, it->second.rootDirection, currentInterval.rootPoint, currentInterval.rootDirection, agentRadius_);
+              const auto &point1 = transformNavmeshCoordinateToWidgetCoordinate(lineStart);
+              const auto &point2 = transformNavmeshCoordinateToWidgetCoordinate(lineEnd);
               painter.drawLine(QPointF{point1.x(), point1.y()}, QPointF{point2.x(), point2.y()});
             }
             currentInterval = it->second;
-            it = pathfindingResult_->aStarInfo.previousInterval.find(currentInterval);
+            it = pathfindingResult_->debugAStarInfo.previous.find(currentInterval);
           }
           painter.restore();
         }
@@ -655,18 +664,20 @@ template<typename NavmeshTriangulationType>
 void NavmeshRenderArea<NavmeshTriangulationType>::preProcessAnimationData() {
   if constexpr (PathfinderType::hasDebugAnimationData()) {
     ends_.clear();
-    pushedTriangles_.clear();
-    visitedTriangles_.clear();
-    for (int i=0; i<pathfindingResult_->aStarInfo.animationData.size(); ++i) {
-      const auto &current = pathfindingResult_->aStarInfo.animationData.at(i);
-      if (std::holds_alternative<PathfinderType::PathfindingAStarInfo::PushInterval>(current)) {
-        const auto &asPush = std::get<PathfinderType::PathfindingAStarInfo::PushInterval>(current);
-        pushedTriangles_.emplace_back(std::get<0>(asPush.trianglevertices), std::get<1>(asPush.trianglevertices), std::get<2>(asPush.trianglevertices));
-      } else if (std::holds_alternative<PathfinderType::PathfindingAStarInfo::PopInterval>(current)) {
-        const auto &asPop = std::get<PathfinderType::PathfindingAStarInfo::PopInterval>(current);
-        visitedTriangles_.emplace_back(std::get<0>(asPop.trianglevertices), std::get<1>(asPop.trianglevertices), std::get<2>(asPop.trianglevertices));
+    pushedIntervals_.clear();
+    visitedIntervals_.clear();
+    pushedIntervalsAsQPolygonF_.clear();
+    visitedIntervalsAsQPolygonF_.clear();
+    for (int i=0; i<pathfindingResult_->debugAStarInfo.intervals.size(); ++i) {
+      const auto &currentIntervalAndPushOrPop = pathfindingResult_->debugAStarInfo.intervals.at(i);
+      if (currentIntervalAndPushOrPop.second == PathfinderType::PathfindingAStarInfo::PushOrPop::kPush) {
+        pushedIntervals_.push_back(currentIntervalAndPushOrPop.first);
+        pushedIntervalsAsQPolygonF_.push_back(intervalToQPolygonF(currentIntervalAndPushOrPop.first));
+      } else {
+        visitedIntervals_.push_back(currentIntervalAndPushOrPop.first);
+        visitedIntervalsAsQPolygonF_.push_back(intervalToQPolygonF(currentIntervalAndPushOrPop.first));
       }
-      ends_.emplace_back(pushedTriangles_.size(), visitedTriangles_.size());
+      ends_.emplace_back(pushedIntervals_.size(), visitedIntervals_.size());
     }
 
     // Initialize animation index.
